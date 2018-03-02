@@ -1,4 +1,7 @@
 #pragma once
+#ifdef HAVE_PTHREAD
+#include <pthread.h> // pthread_*
+#endif
 #include <rawrtcdc.h>
 
 /*

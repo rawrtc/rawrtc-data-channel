@@ -102,6 +102,10 @@ enum rawrtc_code rawrtc_data_channel_parameters_create_internal(
  * When using `RAWRTC_DATA_CHANNEL_TYPE_*_TIMED`, the reliability
  * parameter specifies the time window in milliseconds during which
  * (re-)transmissions may occur before the message is being discarded.
+ *
+ * `*parametersp` must be unreferenced.
+ *
+ * In case `negotiated` is set to `false`, the `id` is being ignored.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_create(
         struct rawrtc_data_channel_parameters** const parametersp, // de-referenced
@@ -147,8 +151,11 @@ enum rawrtc_code rawrtc_data_channel_parameters_create(
 
 /*
  * Get the label from the data channel parameters.
+ * `*labelp` will be set to a copy of the parameter's label and must be
+ * unreferenced.
+ *
  * Return `RAWRTC_CODE_NO_VALUE` in case no label has been set.
- * Otherwise, `RAWRTC_CODE_SUCCESS` will be returned and `*labelp*
+ * Otherwise, `RAWRTC_CODE_SUCCESS` will be returned and `*parameters*
  * must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_label(
@@ -171,6 +178,9 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_label(
 
 /*
  * Get the protocol from the data channel parameters.
+ * `*protocolp` will be set to a copy of the parameter's protocol and
+ * must be unreferenced.
+ *
  * Return `RAWRTC_CODE_NO_VALUE` in case no protocol has been set.
  * Otherwise, `RAWRTC_CODE_SUCCESS` will be returned and `*protocolp*
  * must be unreferenced.

@@ -215,6 +215,7 @@ static void rawrtc_sctp_redirect_transport_destroy(
 
 /*
  * Create an SCTP redirect transport.
+ * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_redirect_transport_create(
         struct rawrtc_sctp_redirect_transport** const transportp, // de-referenced

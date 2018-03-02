@@ -33,6 +33,7 @@ int rawrtc_sctp_capabilities_debug(
 
 /*
  * Create a new SCTP transport capabilities instance.
+ * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_create(
         struct rawrtc_sctp_capabilities** const capabilitiesp, // de-referenced
@@ -78,6 +79,7 @@ enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
 
 /*
  * Get the local SCTP transport capabilities (static).
+ * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
         struct rawrtc_sctp_capabilities** const capabilitiesp // de-referenced

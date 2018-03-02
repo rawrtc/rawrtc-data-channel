@@ -1,9 +1,9 @@
 #pragma once
-#include <inttypes.h>
 
-#define RAWRTC_SCTP_REDIRECT_TRANSPORT_DEFAULT_PORT (uint16_t) 5000
+enum {
+    RAWRTC_SCTP_REDIRECT_TRANSPORT_DEFAULT_PORT = 5000,
+};
 
-#ifdef SCTP_REDIRECT_TRANSPORT
 /*
  * Redirect transport.
  */
@@ -16,5 +16,3 @@ struct rawrtc_sctp_redirect_transport {
     struct mbuf* buffer;
     int socket;
 };
-#endif
-

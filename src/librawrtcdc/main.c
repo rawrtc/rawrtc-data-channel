@@ -17,15 +17,19 @@ struct rawrtcdc_global rawrtcdc_global;
  * Note: In case you override the default mutex used by re it's vital
  *       that you create a recursive mutex or you will get deadlocks!
  */
-enum rawrtc_code rawrtcdc_init() {
+enum rawrtc_code rawrtcdc_init(
+        bool const init_re
+) {
     int err;
 #ifdef HAVE_PTHREAD
     pthread_mutexattr_t mutex_attribute;
 #endif
 
-    // Initialise re
-    if (libre_init()) {
-        return RAWRTC_CODE_INITIALISE_FAIL;
+    // Initialise re (if requested)
+    if (init_re) {
+        if (libre_init()) {
+            return RAWRTC_CODE_INITIALISE_FAIL;
+        }
     }
 
 #ifdef HAVE_PTHREAD
@@ -62,8 +66,13 @@ enum rawrtc_code rawrtcdc_init() {
 
 /*
  * Close rawrtc and free up all resources.
+ *
+ * Note: In case `close_re` is not set to `true`, you MUST close
+ *       re yourselves.
  */
-enum rawrtc_code rawrtcdc_close() {
+enum rawrtc_code rawrtcdc_close(
+        bool const close_re
+) {
     int err;
 
     // TODO: Close usrsctp if initialised
@@ -76,8 +85,10 @@ enum rawrtc_code rawrtcdc_close() {
     }
 #endif
 
-    // Close re
-    libre_close();
+    // Close re (if requested)
+    if (close_re) {
+        libre_close();
+    }
 
     // Done
     return RAWRTC_CODE_SUCCESS;

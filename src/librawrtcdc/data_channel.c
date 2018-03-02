@@ -190,6 +190,7 @@ void rawrtc_data_channel_call_channel_handler(
 
 /*
  * Create a data channel.
+ * `*channelp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_create(
         struct rawrtc_data_channel** const channelp, // de-referenced
@@ -358,6 +359,7 @@ enum rawrtc_code rawrtc_data_channel_unset_handlers(
 
 /*
  * Get the data channel's parameters.
+ * `*parametersp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_get_parameters(
         struct rawrtc_data_channel_parameters** const parametersp, // de-referenced

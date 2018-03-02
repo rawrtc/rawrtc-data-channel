@@ -11,10 +11,13 @@ struct rawrtc_data_channel_options rawrtc_default_data_channel_options = {
 /*
  * Create data channel options.
  *
- * - `deliver_partially`: Enable this if you want to receive partial
- *   messages. Disable if messages should arrive complete. If enabled,
- *   message chunks will be delivered until the message is complete.
- *   Other messages' chunks WILL NOT be interleaved on the same channel.
+ * `*optionsp` must be unreferenced.
+ *
+ * If `deliver_partially` is set to `true`, you will receive partial
+ * messages. If set to `false`, messages will be reassembled before
+ * delivery. If enabled, message chunks will be delivered until the
+ * message is complete. Other messages' chunks WILL NOT be interleaved
+ * on the same channel.
  */
 enum rawrtc_code rawrtc_data_channel_options_create(
         struct rawrtc_data_channel_options** const optionsp, // de-referenced

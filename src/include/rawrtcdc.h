@@ -8,6 +8,7 @@
 #define HAVE_INTTYPES_H
 #include <re.h>
 #include <usrsctp.h>
+#include <rawrtcc.h>
 
 /*
  * Version
@@ -192,19 +193,30 @@ struct rawrtc_sctp_capabilities;
 
 
 /*
- * Initialise rawrtcdc. Must be called before making a call to any other
- * function.
+ * Initialise rawrtcdc. Must be called before making a call to any
+ * other function.
+ *
+ * Note: In case `init_re` is not set to `true`, you MUST initialise
+ *       re yourselves before calling this function.
  */
-enum rawrtc_code rawrtcdc_init();
+enum rawrtc_code rawrtcdc_init(
+    bool const init_re
+);
 
 /*
  * Close rawrtcdc and free up all resources.
+ *
+ * Note: In case `close_re` is not set to `true`, you MUST close
+ *       re yourselves.
  */
-enum rawrtc_code rawrtcdc_close();
+enum rawrtc_code rawrtcdc_close(
+    bool const close_re
+);
 
 #ifdef SCTP_REDIRECT_TRANSPORT
 /*
  * Create an SCTP redirect transport.
+ * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_redirect_transport_create(
     struct rawrtc_sctp_redirect_transport** const transportp, // de-referenced
@@ -246,18 +258,19 @@ enum rawrtc_code rawrtc_sctp_redirect_transport_get_port(
 
 /*
  * Create a new SCTP transport capabilities instance.
+ * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_create(
-        struct rawrtc_sctp_capabilities** const capabilitiesp, // de-referenced
-        uint64_t const max_message_size
+    struct rawrtc_sctp_capabilities** const capabilitiesp, // de-referenced
+    uint64_t const max_message_size
 );
 
 /*
  * Get the SCTP parameter's maximum message size value.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
-        uint64_t* const max_message_sizep, // de-referenced
-        struct rawrtc_sctp_capabilities* const capabilities
+    uint64_t* const max_message_sizep, // de-referenced
+    struct rawrtc_sctp_capabilities* const capabilities
 );
 
 /*
@@ -269,6 +282,7 @@ char const * const rawrtc_sctp_transport_state_to_name(
 
 /*
  * Create an SCTP transport.
+ * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_create(
     struct rawrtc_sctp_transport** const transportp, // de-referenced
@@ -281,6 +295,7 @@ enum rawrtc_code rawrtc_sctp_transport_create(
 
 /*
  * Get the SCTP data transport instance.
+ * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_data_transport(
     struct rawrtc_data_transport** const transportp, // de-referenced
@@ -319,6 +334,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_port(
 
 /*
  * Get the local SCTP transport capabilities (static).
+ * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
     struct rawrtc_sctp_capabilities** const capabilitiesp // de-referenced
@@ -343,6 +359,8 @@ enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
  * parameter specifies the time window in milliseconds during which
  * (re-)transmissions may occur before the message is being discarded.
  *
+ * `*parametersp` must be unreferenced.
+ *
  * In case `negotiated` is set to `false`, the `id` is being ignored.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_create(
@@ -357,6 +375,9 @@ enum rawrtc_code rawrtc_data_channel_parameters_create(
 
 /*
  * Get the label from the data channel parameters.
+ * `*labelp` will be set to a copy of the parameter's label and must be
+ * unreferenced.
+ *
  * Return `RAWRTC_CODE_NO_VALUE` in case no label has been set.
  * Otherwise, `RAWRTC_CODE_SUCCESS` will be returned and `*parameters*
  * must be unreferenced.
@@ -374,6 +395,9 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_label(
 
 /*
  * Get the protocol from the data channel parameters.
+ * `*protocolp` will be set to a copy of the parameter's protocol and
+ * must be unreferenced.
+ *
  * Return `RAWRTC_CODE_NO_VALUE` in case no protocol has been set.
  * Otherwise, `RAWRTC_CODE_SUCCESS` will be returned and `*protocolp*
  * must be unreferenced.
@@ -392,10 +416,13 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_protocol(
 /*
  * Create data channel options.
  *
- * - `deliver_partially`: Enable this if you want to receive partial
- *   messages. Disable if messages should arrive complete. If enabled,
- *   message chunks will be delivered until the message is complete.
- *   Other messages' chunks WILL NOT be interleaved on the same channel.
+ * `*optionsp` must be unreferenced.
+ *
+ * If `deliver_partially` is set to `true`, you will receive partial
+ * messages. If set to `false`, messages will be reassembled before
+ * delivery. If enabled, message chunks will be delivered until the
+ * message is complete. Other messages' chunks WILL NOT be interleaved
+ * on the same channel.
  */
 enum rawrtc_code rawrtc_data_channel_options_create(
     struct rawrtc_data_channel_options** const optionsp, // de-referenced
@@ -411,6 +438,7 @@ char const * const rawrtc_data_channel_state_to_name(
 
 /*
  * Create a data channel.
+ * `*channelp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_create(
     struct rawrtc_data_channel** const channelp, // de-referenced
@@ -481,6 +509,7 @@ enum rawrtc_code rawrtc_data_channel_unset_handlers(
 
 /*
  * Get the data channel's parameters.
+ * `*parametersp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_get_parameters(
     struct rawrtc_data_channel_parameters** const parametersp, // de-referenced

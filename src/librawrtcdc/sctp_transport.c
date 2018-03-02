@@ -1940,6 +1940,7 @@ static void rawrtc_sctp_transport_destroy(
 
 /*
  * Create an SCTP transport.
+ * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_create(
         struct rawrtc_sctp_transport** const transportp, // de-referenced
@@ -2589,6 +2590,7 @@ out:
 
 /*
  * Get the SCTP data transport instance.
+ * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_data_transport(
         struct rawrtc_data_transport** const transportp, // de-referenced

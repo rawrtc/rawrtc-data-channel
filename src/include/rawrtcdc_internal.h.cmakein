@@ -1,3 +1,4 @@
 #pragma once
 
+#include <rawrtcdc.h>
 @rawrtcdc_HEADERS_INCLUDE@
