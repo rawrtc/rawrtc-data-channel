@@ -1,5 +1,4 @@
 #pragma once
-
 #include <stdbool.h> // bool
 
 // TODO: Make this a build configuration
@@ -7,7 +6,6 @@
 
 #define HAVE_INTTYPES_H
 #include <re.h>
-#include <usrsctp.h>
 #include <rawrtcc.h>
 
 /*

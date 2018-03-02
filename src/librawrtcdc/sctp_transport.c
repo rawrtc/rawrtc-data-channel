@@ -1,4 +1,4 @@
-#include <stdio.h> // fopen
+#include <stdio.h> // fopen, ...
 #include <string.h> // memcpy, strlen
 #include <errno.h> // errno
 #include <sys/socket.h> // AF_INET, SOCK_STREAM, linger
@@ -9,7 +9,6 @@
 #include <usrsctp.h> // usrsctp*
 #include <rawrtcdc.h>
 #include "main.h"
-#include "utils.h"
 #include "message_buffer.h"
 #include "data_transport.h"
 #include "data_channel_parameters.h"

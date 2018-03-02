@@ -1,5 +1,8 @@
 #pragma once
-#include <usrsctp.h>
+#include <stdio.h> // FILE
+#include <sys/socket.h> // socklen_t
+#include <usrsctp.h> // SCTP_EVENT_*, ...
+#include <rawrtcdc.h>
 
 /*
  * usrsctp event flag extensions for handlers.

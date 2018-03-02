@@ -1,5 +1,4 @@
 #include <rawrtcdc.h>
-#include "utils.h"
 #include "data_channel.h"
 
 #define DEBUG_MODULE "data-channel"

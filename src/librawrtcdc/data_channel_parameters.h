@@ -1,4 +1,5 @@
 #pragma once
+#include <rawrtcdc.h>
 
 struct rawrtc_data_channel_parameters {
     char* label; // copied

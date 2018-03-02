@@ -1,4 +1,5 @@
 #pragma once
+#include <rawrtcdc.h>
 
 enum {
     RAWRTC_SCTP_REDIRECT_TRANSPORT_DEFAULT_PORT = 5000,

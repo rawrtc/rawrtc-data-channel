@@ -1,5 +1,4 @@
 #include <rawrtcdc.h>
-#include "utils.h"
 #include "data_transport.h"
 
 #define DEBUG_MODULE "data-transport"
@@ -56,11 +55,11 @@ enum rawrtc_code rawrtc_data_transport_create(
 }
 
 static enum rawrtc_data_transport_type const map_enum_data_transport_type[] = {
-        RAWRTC_DATA_TRANSPORT_TYPE_SCTP,
+    RAWRTC_DATA_TRANSPORT_TYPE_SCTP,
 };
 
 static char const * const map_str_data_transport_type[] = {
-        "SCTP",
+    "SCTP",
 };
 
 static size_t const map_data_transport_type_length = ARRAY_SIZE(map_enum_data_transport_type);

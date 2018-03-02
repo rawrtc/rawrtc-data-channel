@@ -1,4 +1,5 @@
 #pragma once
+#include <rawrtcdc.h>
 
 /*
  * Data transport type.
