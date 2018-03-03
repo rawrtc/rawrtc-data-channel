@@ -19,6 +19,24 @@
 #define RAWRTCDC_VERSION "0.0.1"
 
 /*
+ * External DTLS role.
+ */
+enum rawrtc_external_dtls_role {
+    RAWRTC_EXTERNAL_DTLS_ROLE_CLIENT,
+    RAWRTC_EXTERNAL_DTLS_ROLE_SERVER
+};
+
+/*
+ * External DTLS transport state.
+ */
+enum rawrtc_external_dtls_transport_state {
+    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTING,
+    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTED,
+    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED,
+    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_FAILED
+};
+
+/*
  * Data channel is unordered bit flag.
  */
 enum {
@@ -81,6 +99,118 @@ enum rawrtc_sctp_redirect_transport_state {
 #endif
 
 
+
+#ifdef SCTP_REDIRECT_TRANSPORT
+/*
+ * Redirect transport.
+ */
+struct rawrtc_sctp_redirect_transport;
+#endif
+
+/*
+ * SCTP transport.
+ */
+struct rawrtc_sctp_transport;
+
+/*
+ * SCTP data channel context.
+ */
+struct rawrtc_sctp_data_channel_context;
+
+/*
+ * Data channel.
+ */
+struct rawrtc_data_channel;
+
+/*
+ * Generic data transport.
+ */
+struct rawrtc_data_transport;
+
+/*
+ * Data channel parameters.
+ */
+struct rawrtc_data_channel_parameters;
+
+/*
+ * Data channel options.
+ */
+struct rawrtc_data_channel_options;
+
+/*
+ * SCTP capabilities.
+ */
+struct rawrtc_sctp_capabilities;
+
+
+
+/*
+ * DTLS role getter.
+ *
+ * `*rolep` will contain the current external DTLS role.
+ * `arg` is the argument passed to the SCTP transport context.
+ *
+ * Return `RAWRTC_CODE_SUCCESS` in case the role has been set or any
+ * other code in case of an error.
+ */
+typedef enum rawrtc_code (rawrtc_dtls_role_getter)(
+    enum rawrtc_external_dtls_role* const rolep, // de-referenced
+    void* const arg
+);
+
+/*
+ * DTLS transport state getter.
+ *
+ * `*statep` will contain the current external DTLS transport state.
+ * `arg` is the argument passed to the SCTP transport context.
+ *
+ * Return `RAWRTC_CODE_SUCCESS` in case the state has been set or any
+ * other code in case of an error.
+ */
+typedef enum rawrtc_code (rawrtc_dtls_transport_state_getter)(
+    enum rawrtc_external_dtls_transport_state* const statep, // de-referenced
+    void* const arg
+);
+
+/*
+ * SCTP transport outbound data handler.
+ *
+ * `buffer` contains the data to be fed to the DTLS transport.
+ * In case the external DTLS transport state is *connected*, the `mbuf`
+ * structure shall not be `mem_ref`ed or `mem_deref`ed since it hasn't
+ * been allocated properly for optimisation purposes. This has been
+ * done since we expect you to either send this data directly or drop
+ * it. There's no need to hold data back.
+ * For any other DTLS transport state, it will contain a normal `mbuf`
+ * structure that can be `mem_ref`ed and must be `mem_deref`ed once it
+ * has been sent or dropped. This way, you can queue the data and send
+ * it once the transport is ready as expected by the ORTC
+ * specification.
+ * `tos` contains the type of service field as reported by usrsctp.
+ * `set_df` TODO: Probably don't fragment bit? Dunno...
+ *
+ * Return `RAWRTC_CODE_SUCCESS` in case the packet has been sent (or
+ * dropped) or any other code in case of an error.
+ */
+typedef enum rawrtc_code (rawrtc_sctp_transport_outbound_handler)(
+    struct mbuf* const buffer,
+    uint8_t const tos,
+    uint8_t const set_df,
+    void* const arg
+);
+
+/*
+ * SCTP transport destroyed handler.
+ * Will be called when the SCTP transport is about to be free'd.
+ *
+ * Note: This handler only exists for cleanup purposes. You may not use
+ *       any of the transport's functions at this point.
+ *
+ * `arg` is the argument passed to the SCTP transport context.
+ */
+typedef void (rawrtc_sctp_transport_destroyed_handler)(
+    void* const arg
+);
 
 /*
  * SCTP transport state change handler.
@@ -146,47 +276,16 @@ typedef void (rawrtc_data_channel_handler)(
 
 
 
-#ifdef SCTP_REDIRECT_TRANSPORT
 /*
- * Redirect transport.
+ * SCTP transport context.
  */
-struct rawrtc_sctp_redirect_transport;
-#endif
-
-/*
- * SCTP transport.
- */
-struct rawrtc_sctp_transport;
-
-/*
- * SCTP data channel context.
- */
-struct rawrtc_sctp_data_channel_context;
-
-/*
- * Data channel.
- */
-struct rawrtc_data_channel;
-
-/*
- * Generic data transport.
- */
-struct rawrtc_data_transport;
-
-/*
- * Data channel parameters.
- */
-struct rawrtc_data_channel_parameters;
-
-/*
- * Data channel options.
- */
-struct rawrtc_data_channel_options;
-
-/*
- * SCTP capabilities.
- */
-struct rawrtc_sctp_capabilities;
+struct rawrtc_sctp_transport_context {
+    rawrtc_dtls_role_getter* role_getter;
+    rawrtc_dtls_transport_state_getter* state_getter;
+    rawrtc_sctp_transport_outbound_handler* outbound_handler;
+    rawrtc_sctp_transport_destroyed_handler* destroyed_handler; // nullable
+    void* arg; // nullable
+};
 
 
 
@@ -272,19 +371,12 @@ enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
 );
 
 /*
- * Get the corresponding name for an SCTP transport state.
- */
-char const * const rawrtc_sctp_transport_state_to_name(
-    enum rawrtc_sctp_transport_state const state
-);
-
-/*
  * Create an SCTP transport.
  * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_create(
     struct rawrtc_sctp_transport** const transportp, // de-referenced
-    struct rawrtc_dtls_transport* const dtls_transport, // referenced
+    struct rawrtc_sctp_transport_context* const context, // copied
     uint16_t port, // zeroable
     rawrtc_data_channel_handler* const data_channel_handler, // nullable
     rawrtc_sctp_transport_state_change_handler* const state_change_handler, // nullable
@@ -317,6 +409,25 @@ enum rawrtc_code rawrtc_sctp_transport_stop(
 );
 
 /*
+ * Feed inbound data to the SCTP transport.
+ *
+ * `buffer` contains the data to be fed to the SCTP transport. Since
+ * the data is not going to be referenced, you can pass a *fake* `mbuf`
+ * structure that hasn't been allocated with `mbuf_alloc` to avoid
+ * copying.
+ * `ecn_bits` are the explicit congestion notification bits to be
+ * passed to usrsctp.
+ *
+ * Return `RAWRTC_CODE_INVALID_STATE` in case the transport is closed.
+ * Otherwise, `RAWRTC_CODE_SUCCESS` is being returned.
+ */
+enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
+    struct mbuf* const buffer,
+    uint8_t const ecn_bits,
+    void* const arg
+);
+
+/*
  * TODO (from RTCSctpTransport interface)
  * rawrtc_sctp_transport_get_transport
  * rawrtc_sctp_transport_get_state
@@ -342,6 +453,13 @@ enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
  * TODO (from RTCSctpTransport interface)
  * rawrtc_sctp_transport_set_data_channel_handler
  */
+
+/*
+ * Get the corresponding name for an SCTP transport state.
+ */
+char const * const rawrtc_sctp_transport_state_to_name(
+        enum rawrtc_sctp_transport_state const state
+);
 
 /*
  * Create data channel parameters.
@@ -425,13 +543,6 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_protocol(
 enum rawrtc_code rawrtc_data_channel_options_create(
     struct rawrtc_data_channel_options** const optionsp, // de-referenced
     bool const deliver_partially
-);
-
-/*
- * Get the corresponding name for a data channel state.
- */
-char const * const rawrtc_data_channel_state_to_name(
-    enum rawrtc_data_channel_state const state
 );
 
 /*
@@ -597,4 +708,11 @@ enum rawrtc_code rawrtc_data_channel_set_message_handler(
 enum rawrtc_code rawrtc_data_channel_get_message_handler(
     rawrtc_data_channel_message_handler** const message_handlerp, // de-referenced
     struct rawrtc_data_channel* const channel
+);
+
+/*
+ * Get the corresponding name for a data channel state.
+ */
+char const * const rawrtc_data_channel_state_to_name(
+        enum rawrtc_data_channel_state const state
 );

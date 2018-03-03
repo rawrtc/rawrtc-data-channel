@@ -4,6 +4,8 @@
 #endif
 #include <rawrtcdc.h>
 
+extern struct rawrtcdc_global rawrtcdc_global;
+
 /*
  * Global rawrtcdc vars.
  */

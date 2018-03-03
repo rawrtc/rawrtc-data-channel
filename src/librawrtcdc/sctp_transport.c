@@ -7,16 +7,19 @@
     #define SCTP_DEBUG
 #endif
 #include <usrsctp.h> // usrsctp*
+#include <rawrtcc/internal/message_buffer.h>
 #include <rawrtcdc.h>
 #include "main.h"
-#include "message_buffer.h"
 #include "data_transport.h"
+#include "data_channel_options.h"
 #include "data_channel_parameters.h"
+#include "data_channel.h"
+#include "sctp_capabilities.h"
 #include "sctp_transport.h"
 
 #define DEBUG_MODULE "sctp-transport"
 //#define RAWRTC_DEBUG_MODULE_LEVEL 7 // Note: Uncomment this to debug this module only
-#include "debug.h"
+#include <rawrtcc/internal/debug.h>
 
 // SCTP outgoing message context (needed when buffering)
 struct send_context {
@@ -61,7 +64,7 @@ static void channel_register(
     bool const raise_event
 );
 
-enum rawrtc_code sctp_transport_send(
+static enum rawrtc_code sctp_transport_send(
     struct rawrtc_sctp_transport* const transport, // not checked
     struct mbuf* const buffer, // not checked
     void* const info, // not checked
@@ -252,26 +255,6 @@ static enum rawrtc_code data_channel_ack_message_create(
         // Set pointer & done
         *bufferp = buffer;
         return RAWRTC_CODE_SUCCESS;
-    }
-}
-
-/*
- * Get the corresponding name for an SCTP transport state.
- */
-char const * const rawrtc_sctp_transport_state_to_name(
-        enum rawrtc_sctp_transport_state const state
-) {
-    switch (state) {
-        case RAWRTC_SCTP_TRANSPORT_STATE_NEW:
-            return "new";
-        case RAWRTC_SCTP_TRANSPORT_STATE_CONNECTING:
-            return "connecting";
-        case RAWRTC_SCTP_TRANSPORT_STATE_CONNECTED:
-            return "connected";
-        case RAWRTC_SCTP_TRANSPORT_STATE_CLOSED:
-            return "closed";
-        default:
-            return "???";
     }
 }
 
@@ -496,10 +479,6 @@ static void set_state(
 
         // Close all data channels
         close_data_channels(transport);
-
-        // Remove from DTLS transport
-        // Note: No NULL checking needed as the function will do that for us
-        rawrtc_dtls_transport_clear_data_transport(transport->dtls_transport);
 
         // Close socket and deregister transport
         if (transport->socket) {
@@ -1110,12 +1089,11 @@ static int sctp_packet_handler(
 ) {
     struct rawrtc_sctp_transport* const transport = arg;
     enum rawrtc_code error;
-    (void) tos; // TODO: Handle?
-    (void) set_df; // TODO: Handle?
+    enum rawrtc_external_dtls_transport_state dtls_transport_state;
 
     // Lock event loop mutex
     // TODO: Why do we need this again? There should be no thread running in usrsctp...
-    rawrtc_thread_enter();
+    re_thread_enter();
 
     // Closed?
     if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
@@ -1127,8 +1105,16 @@ static int sctp_packet_handler(
     // Note: No need to check if NULL as the function does it for us
     trace_packet(transport, buffer, length, SCTP_DUMP_OUTBOUND);
 
+    // Get DTLS transport state
+    error = transport->context.state_getter(&dtls_transport_state, transport->context.arg);
+    if (error) {
+        DEBUG_WARNING("Getting external DTLS transport state failed: %s\n",
+                      rawrtc_code_to_str(error));
+        return RAWRTC_CODE_EXTERNAL_ERROR;
+    }
+
     // Note: We only need to copy the buffer if we add it to the outgoing queue
-    if (transport->dtls_transport->state == RAWRTC_DTLS_TRANSPORT_STATE_CONNECTED) {
+    if (dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTED) {
         struct mbuf mbuffer;
 
         // Note: dtls_send does not reference the buffer, so we can safely fake an mbuf structure
@@ -1139,7 +1125,7 @@ static int sctp_packet_handler(
         mbuffer.end = length;
 
         // Send
-        error = rawrtc_dtls_transport_send(transport->dtls_transport, &mbuffer);
+        error = transport->context.outbound_handler(&mbuffer, tos, set_df, transport->context.arg);
     } else {
         int err;
 
@@ -1160,7 +1146,7 @@ static int sctp_packet_handler(
         mbuf_set_pos(mbuffer, 0);
 
         // Send (well, actually buffer...)
-        error = rawrtc_dtls_transport_send(transport->dtls_transport, mbuffer);
+        error = transport->context.outbound_handler(mbuffer, tos, set_df, transport->context.arg);
         mem_deref(mbuffer);
     }
 
@@ -1172,7 +1158,7 @@ static int sctp_packet_handler(
 
 out:
     // Unlock event loop mutex
-    rawrtc_thread_leave();
+    re_thread_leave();
 
     // TODO: What does the return code do?
     return 0;
@@ -1221,6 +1207,7 @@ static void handle_data_channel_open_message(
         struct sctp_rcvinfo* const info
 ) {
     enum rawrtc_code error;
+    enum rawrtc_external_dtls_role dtls_role;
     struct rawrtc_data_channel_parameters* parameters;
     uint_fast16_t priority;
     struct rawrtc_data_transport* data_transport = NULL;
@@ -1228,20 +1215,23 @@ static void handle_data_channel_open_message(
     struct rawrtc_sctp_data_channel_context* context = NULL;
     struct mbuf* buffer_out = NULL;
 
+    // Get DTLS role
+    error = transport->context.role_getter(&dtls_role, transport->context.arg);
+    if (error) {
+        DEBUG_WARNING("Getting external DTLS role failed: %s\n", rawrtc_code_to_str(error));
+        return;
+    }
+
     // Check SID corresponds to other peer's role
-    switch (transport->dtls_transport->role) {
-        case RAWRTC_DTLS_ROLE_AUTO:
-            // Note: This case should be impossible. If it happens, report it!
-            DEBUG_WARNING("Cannot validate SID due to undetermined DTLS role\n");
-            return;
-        case RAWRTC_DTLS_ROLE_CLIENT:
+    switch (dtls_role) {
+        case RAWRTC_EXTERNAL_DTLS_ROLE_CLIENT:
             // Other peer must have chosen an odd SID
             if (info->rcv_sid % 2 != 1) {
                 DEBUG_WARNING("Other peer incorrectly chose an even SID\n");
                 return;
             }
             break;
-        case RAWRTC_DTLS_ROLE_SERVER:
+        case RAWRTC_EXTERNAL_DTLS_ROLE_SERVER:
             // Other peer must have chosen an even SID
             if (info->rcv_sid % 2 != 0) {
                 DEBUG_WARNING("Other peer incorrectly chose an odd SID\n");
@@ -1635,7 +1625,7 @@ static int read_event_handler(
     // TODO: Can we get the COMPLETE message size or just the current message size?
 
     // Create buffer
-    buffer = mbuf_alloc(rawrtc_global.usrsctp_chunk_size);
+    buffer = mbuf_alloc(rawrtcdc_global.usrsctp_chunk_size);
     if (!buffer) {
         DEBUG_WARNING("Cannot allocate buffer, no memory");
         // TODO: This needs to be handled in a better way, otherwise it's probably going
@@ -1768,7 +1758,7 @@ static void upcall_handler_helper(
     (void) flags; // TODO: What does this indicate?
 
     // Lock event loop mutex
-    rawrtc_thread_enter();
+    re_thread_enter();
 
     // TODO: This loop may lead to long blocking and is unfair to normal fds.
     //       It's a compromise because scheduling repetitive timers in re's event loop seems to
@@ -1798,7 +1788,7 @@ static void upcall_handler_helper(
     }
 
     // Unlock event loop mutex
-    rawrtc_thread_leave();
+    re_thread_leave();
 }
 
 /*
@@ -1810,37 +1800,11 @@ static void timer_handler(
     (void) arg;
 
     // Restart timer
-    tmr_start(&rawrtc_global.usrsctp_tick_timer, RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT,
+    tmr_start(&rawrtcdc_global.usrsctp_tick_timer, RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT,
               timer_handler, NULL);
 
     // Pass delta ms to usrsctp
     usrsctp_handle_timers(RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT);
-}
-
-/*
- * Handle incoming DTLS messages.
- */
-static void dtls_receive_handler(
-        struct mbuf* const buffer,
-        void* const arg
-) {
-    struct rawrtc_sctp_transport* const transport = arg;
-    size_t const length = mbuf_get_left(buffer);
-
-    // Closed?
-    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
-        DEBUG_PRINTF("Ignoring incoming SCTP message, transport is closed\n");
-        return;
-    }
-
-    // Trace (if trace handle)
-    // Note: No need to check if NULL as the function does it for us
-    trace_packet(transport, mbuf_buf(buffer), length, SCTP_DUMP_INBOUND);
-
-    // Feed into SCTP socket
-    // TODO: What about ECN bits?
-    DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
-    usrsctp_conninput(transport, mbuf_buf(buffer), length, 0);
 }
 
 /*
@@ -1917,19 +1881,23 @@ static void rawrtc_sctp_transport_destroy(
     // TODO: Check effects in case transport has been destroyed due to error in create
     rawrtc_sctp_transport_stop(transport);
 
+    // Call 'destroyed' handler
+    if (transport->context.destroyed_handler) {
+        transport->context.destroyed_handler(transport->context.arg);
+    }
+
     // Un-reference
     mem_deref(transport->channels);
     mem_deref(transport->buffer_dcep_inbound);
     list_flush(&transport->buffered_messages_outgoing);
-    mem_deref(transport->dtls_transport);
 
     // Decrease in-use counter
-    --rawrtc_global.usrsctp_initialized;
+    --rawrtcdc_global.usrsctp_initialized;
 
     // Close usrsctp (if needed)
-    if (rawrtc_global.usrsctp_initialized == 0) {
+    if (rawrtcdc_global.usrsctp_initialized == 0) {
         // Cancel timer
-        tmr_cancel(&rawrtc_global.usrsctp_tick_timer);
+        tmr_cancel(&rawrtcdc_global.usrsctp_tick_timer);
 
         // Close
         usrsctp_finish();
@@ -1943,15 +1911,15 @@ static void rawrtc_sctp_transport_destroy(
  */
 enum rawrtc_code rawrtc_sctp_transport_create(
         struct rawrtc_sctp_transport** const transportp, // de-referenced
-        struct rawrtc_dtls_transport* const dtls_transport, // referenced
+        struct rawrtc_sctp_transport_context* const context, // copied
         uint16_t port, // zeroable
         rawrtc_data_channel_handler* const data_channel_handler, // nullable
         rawrtc_sctp_transport_state_change_handler* const state_change_handler, // nullable
         void* const arg // nullable
 ) {
     enum rawrtc_code error;
+    enum rawrtc_external_dtls_transport_state dtls_transport_state;
     uint_fast16_t n_channels;
-    bool have_data_transport;
     struct rawrtc_sctp_transport* transport;
     struct sctp_assoc_value av;
     struct linger linger_option;
@@ -1961,13 +1929,24 @@ enum rawrtc_code rawrtc_sctp_transport_create(
     struct sockaddr_conn peer = {0};
 
     // Check arguments
-    if (!transportp || !dtls_transport) {
+    if (!transportp || !context) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Ensure the context contains all callbacks
+    if (!context->role_getter || !context->state_getter || !context->outbound_handler) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
     }
 
     // Check DTLS transport state
-    if (dtls_transport->state == RAWRTC_DTLS_TRANSPORT_STATE_CLOSED
-            || dtls_transport->state == RAWRTC_DTLS_TRANSPORT_STATE_FAILED) {
+    error = context->state_getter(&dtls_transport_state, context->arg);
+    if (error) {
+        DEBUG_WARNING("Getting external DTLS transport state failed: %s\n",
+                      rawrtc_code_to_str(error));
+        return RAWRTC_CODE_EXTERNAL_ERROR;
+    }
+    if (dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED
+        || dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_FAILED) {
         return RAWRTC_CODE_INVALID_STATE;
     }
 
@@ -1980,17 +1959,8 @@ enum rawrtc_code rawrtc_sctp_transport_create(
         port = RAWRTC_SCTP_TRANSPORT_DEFAULT_PORT;
     }
 
-    // Check if a data transport is already registered
-    error = rawrtc_dtls_transport_have_data_transport(&have_data_transport, dtls_transport);
-    if (error) {
-        return error;
-    }
-    if (have_data_transport) {
-        return RAWRTC_CODE_INVALID_ARGUMENT;
-    }
-
     // Initialise usrsctp (if needed)
-    if (rawrtc_global.usrsctp_initialized == 0) {
+    if (rawrtcdc_global.usrsctp_initialized == 0) {
         DEBUG_PRINTF("Initialising usrsctp\n");
         usrsctp_init(0, sctp_packet_handler, dbg_info);
 
@@ -2032,8 +2002,8 @@ enum rawrtc_code rawrtc_sctp_transport_create(
         usrsctp_sysctl_set_sctp_default_frag_interleave(2);
 
         // Start timers
-        tmr_init(&rawrtc_global.usrsctp_tick_timer);
-        tmr_start(&rawrtc_global.usrsctp_tick_timer, RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT,
+        tmr_init(&rawrtcdc_global.usrsctp_tick_timer);
+        tmr_start(&rawrtcdc_global.usrsctp_tick_timer, RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT,
                   timer_handler, NULL);
     }
 
@@ -2045,12 +2015,12 @@ enum rawrtc_code rawrtc_sctp_transport_create(
 
     // Increase in-use counter
     // Note: This needs to be below allocation to ensure the counter is decreased properly on error
-    ++rawrtc_global.usrsctp_initialized;
+    ++rawrtcdc_global.usrsctp_initialized;
 
     // Set fields/reference
+    transport->context = *context;
     transport->state = RAWRTC_SCTP_TRANSPORT_STATE_NEW; // TODO: Raise state (delayed)?
     transport->port = port;
-    transport->dtls_transport = mem_ref(dtls_transport);
     transport->data_channel_handler = data_channel_handler;
     transport->state_change_handler = state_change_handler;
     transport->arg = arg;
@@ -2117,7 +2087,7 @@ enum rawrtc_code rawrtc_sctp_transport_create(
     }
 
     // Determine chunk size
-    if (rawrtc_global.usrsctp_initialized == 1) {
+    if (rawrtcdc_global.usrsctp_initialized == 1) {
         socklen_t option_size = sizeof(int); // PD point is int according to spec
         if (usrsctp_getsockopt(
                 transport->socket, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
@@ -2135,7 +2105,7 @@ enum rawrtc_code rawrtc_sctp_transport_create(
         }
 
         // Store value
-        rawrtc_global.usrsctp_chunk_size = (size_t) option_value;
+        rawrtcdc_global.usrsctp_chunk_size = (size_t) option_value;
         DEBUG_PRINTF("Chunk size: %zu\n", rawrtc_global.usrsctp_chunk_size);
     }
 
@@ -2219,14 +2189,6 @@ enum rawrtc_code rawrtc_sctp_transport_create(
     if (usrsctp_bind(transport->socket, (struct sockaddr*) &peer, sizeof(peer))) {
         DEBUG_WARNING("Could not bind local address, reason: %m\n", errno);
         error = rawrtc_error_to_code(errno);
-        goto out;
-    }
-
-    // Attach to ICE transport
-    DEBUG_PRINTF("Attaching as data transport\n");
-    error = rawrtc_dtls_transport_set_data_transport(
-            transport->dtls_transport, dtls_receive_handler, transport);
-    if (error) {
         goto out;
     }
 
@@ -2352,24 +2314,41 @@ static enum rawrtc_code channel_create_inband(
         struct rawrtc_data_channel_parameters const * const parameters // read-only
 ) {
     enum rawrtc_code error;
+    enum rawrtc_external_dtls_transport_state dtls_transport_state;
+    enum rawrtc_external_dtls_role dtls_role;
     uint_fast16_t i;
     struct rawrtc_sctp_data_channel_context* context;
     struct mbuf* buffer;
+
+    // Get DTLS transport state
+    error = transport->context.state_getter(&dtls_transport_state, transport->context.arg);
+    if (error) {
+        DEBUG_WARNING("Getting external DTLS transport state failed: %s\n",
+                      rawrtc_code_to_str(error));
+        return RAWRTC_CODE_EXTERNAL_ERROR;
+    }
 
     // Check DTLS state
     // Note: We need to have an open DTLS connection to determine whether we use odd or even
     // SIDs.
     // TODO: Can we fix this somehow to make it possible to create data channels earlier?
-    if (transport->dtls_transport->state != RAWRTC_DTLS_TRANSPORT_STATE_CONNECTED) {
+    if (dtls_transport_state != RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTED) {
         return RAWRTC_CODE_INVALID_STATE;
     }
 
+    // Get DTLS role
+    error = transport->context.role_getter(&dtls_role, transport->context.arg);
+    if (error) {
+        DEBUG_WARNING("Getting external DTLS role failed: %s\n", rawrtc_code_to_str(error));
+        return RAWRTC_CODE_EXTERNAL_ERROR;
+    }
+
     // Use odd or even SIDs
-    switch (transport->dtls_transport->role) {
-        case RAWRTC_DTLS_ROLE_CLIENT:
+    switch (dtls_role) {
+        case RAWRTC_EXTERNAL_DTLS_ROLE_CLIENT:
             i = 0;
             break;
-        case RAWRTC_DTLS_ROLE_SERVER:
+        case RAWRTC_EXTERNAL_DTLS_ROLE_SERVER:
             i = 1;
             break;
         default:
@@ -2760,7 +2739,7 @@ out:
 /*
  * Send a message (non-deferred) via the SCTP transport.
  */
-enum rawrtc_code sctp_transport_send(
+static enum rawrtc_code sctp_transport_send(
         struct rawrtc_sctp_transport* const transport, // not checked
         struct mbuf* const buffer, // not checked
         void* const info, // not checked
@@ -2799,8 +2778,8 @@ enum rawrtc_code sctp_transport_send(
         size_t const left = mbuf_get_left(buffer);
 
         // Carefully chunk the buffer
-        if (left > rawrtc_global.usrsctp_chunk_size) {
-            length = rawrtc_global.usrsctp_chunk_size;
+        if (left > rawrtcdc_global.usrsctp_chunk_size) {
+            length = rawrtcdc_global.usrsctp_chunk_size;
 
             // Unset EOR flag
             send_info->snd_flags &= ~SCTP_EOR;
@@ -2928,6 +2907,44 @@ out:
 }
 
 /*
+ * Feed inbound data to the SCTP transport.
+ *
+ * `buffer` contains the data to be fed to the SCTP transport. Since
+ * the data is not going to be referenced, you can pass a *fake* `mbuf`
+ * structure that hasn't been allocated with `mbuf_alloc` to avoid
+ * copying.
+ * `ecn_bits` are the explicit congestion notification bits to be
+ * passed to usrsctp.
+ *
+ * Return `RAWRTC_CODE_INVALID_STATE` in case the transport is closed.
+ * Otherwise, `RAWRTC_CODE_SUCCESS` is being returned.
+ */
+enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
+        struct mbuf* const buffer,
+        uint8_t const ecn_bits,
+        void* const arg
+) {
+    struct rawrtc_sctp_transport* const transport = arg;
+    size_t const length = mbuf_get_left(buffer);
+
+    // Closed?
+    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
+        return RAWRTC_CODE_INVALID_STATE;
+    }
+
+    // Trace (if trace handle)
+    // Note: No need to check if NULL as the function does it for us
+    trace_packet(transport, mbuf_buf(buffer), length, SCTP_DUMP_INBOUND);
+
+    // Feed into SCTP socket
+    DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
+    usrsctp_conninput(transport, mbuf_buf(buffer), length, ecn_bits);
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
  * Get the local port of the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_port(
@@ -2944,4 +2961,24 @@ enum rawrtc_code rawrtc_sctp_transport_get_port(
 
     // Done
     return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the corresponding name for an SCTP transport state.
+ */
+char const * const rawrtc_sctp_transport_state_to_name(
+        enum rawrtc_sctp_transport_state const state
+) {
+    switch (state) {
+        case RAWRTC_SCTP_TRANSPORT_STATE_NEW:
+            return "new";
+        case RAWRTC_SCTP_TRANSPORT_STATE_CONNECTING:
+            return "connecting";
+        case RAWRTC_SCTP_TRANSPORT_STATE_CONNECTED:
+            return "connected";
+        case RAWRTC_SCTP_TRANSPORT_STATE_CLOSED:
+            return "closed";
+        default:
+            return "???";
+    }
 }

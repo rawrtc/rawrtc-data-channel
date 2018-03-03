@@ -3,7 +3,7 @@
 
 #define DEBUG_MODULE "data-transport"
 //#define RAWRTC_DEBUG_MODULE_LEVEL 7 // Note: Uncomment this to debug this module only
-#include "debug.h"
+#include <rawrtcc/internal/debug.h>
 
 /*
  * Destructor for an existing data transport.

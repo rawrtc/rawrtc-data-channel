@@ -76,10 +76,10 @@ enum {
 };
 
 struct rawrtc_sctp_transport {
+    struct rawrtc_sctp_transport_context context;
     enum rawrtc_sctp_transport_state state;
     uint16_t port;
     uint64_t remote_maximum_message_size;
-    struct rawrtc_dtls_transport* dtls_transport; // referenced
     rawrtc_data_channel_handler* data_channel_handler; // nullable
     rawrtc_sctp_transport_state_change_handler* state_change_handler; // nullable
     void* arg; // nullable

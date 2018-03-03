@@ -1,29 +1,11 @@
 #include <rawrtcdc.h>
+#include "data_transport.h"
+#include "data_channel_options.h"
 #include "data_channel.h"
 
 #define DEBUG_MODULE "data-channel"
 //#define RAWRTC_DEBUG_MODULE_LEVEL 7 // Note: Uncomment this to debug this module only
-#include "debug.h"
-
-/*
- * Get the corresponding name for a data channel state.
- */
-char const * const rawrtc_data_channel_state_to_name(
-        enum rawrtc_data_channel_state const state
-) {
-    switch (state) {
-        case RAWRTC_DATA_CHANNEL_STATE_CONNECTING:
-            return "connecting";
-        case RAWRTC_DATA_CHANNEL_STATE_OPEN:
-            return "open";
-        case RAWRTC_DATA_CHANNEL_STATE_CLOSING:
-            return "closing";
-        case RAWRTC_DATA_CHANNEL_STATE_CLOSED:
-            return "closed";
-        default:
-            return "???";
-    }
-}
+#include <rawrtcc/internal/debug.h>
 
 /*
  * Change the state of the data channel.
@@ -566,5 +548,25 @@ enum rawrtc_code rawrtc_data_channel_get_message_handler(
         return RAWRTC_CODE_SUCCESS;
     } else {
         return RAWRTC_CODE_NO_VALUE;
+    }
+}
+
+/*
+ * Get the corresponding name for a data channel state.
+ */
+char const * const rawrtc_data_channel_state_to_name(
+        enum rawrtc_data_channel_state const state
+) {
+    switch (state) {
+        case RAWRTC_DATA_CHANNEL_STATE_CONNECTING:
+            return "connecting";
+        case RAWRTC_DATA_CHANNEL_STATE_OPEN:
+            return "open";
+        case RAWRTC_DATA_CHANNEL_STATE_CLOSING:
+            return "closing";
+        case RAWRTC_DATA_CHANNEL_STATE_CLOSED:
+            return "closed";
+        default:
+            return "???";
     }
 }
