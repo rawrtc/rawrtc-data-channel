@@ -30,10 +30,16 @@ enum rawrtc_external_dtls_role {
  * External DTLS transport state.
  */
 enum rawrtc_external_dtls_transport_state {
-    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTING,
+    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_NEW_OR_CONNECTING,
     RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTED,
-    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED,
-    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_FAILED
+    RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED_OR_FAILED,
+};
+
+/*
+ * Data transport type.
+ */
+enum rawrtc_data_transport_type {
+    RAWRTC_DATA_TRANSPORT_TYPE_SCTP
 };
 
 /*
@@ -113,11 +119,6 @@ struct rawrtc_sctp_redirect_transport;
 struct rawrtc_sctp_transport;
 
 /*
- * SCTP data channel context.
- */
-struct rawrtc_sctp_data_channel_context;
-
-/*
  * Data channel.
  */
 struct rawrtc_data_channel;
@@ -176,16 +177,12 @@ typedef enum rawrtc_code (rawrtc_dtls_transport_state_getter)(
  * SCTP transport outbound data handler.
  *
  * `buffer` contains the data to be fed to the DTLS transport.
- * In case the external DTLS transport state is *connected*, the `mbuf`
- * structure shall not be `mem_ref`ed or `mem_deref`ed since it hasn't
- * been allocated properly for optimisation purposes. This has been
- * done since we expect you to either send this data directly or drop
- * it. There's no need to hold data back.
- * For any other DTLS transport state, it will contain a normal `mbuf`
- * structure that can be `mem_ref`ed and must be `mem_deref`ed once it
- * has been sent or dropped. This way, you can queue the data and send
- * it once the transport is ready as expected by the ORTC
- * specification.
+ * Note that the `mbuf` structure shall not be `mem_ref`ed or
+ * `mem_deref`ed since it hasn't been allocated properly for
+ * optimisation purposes. This has been done since we expect you to
+ * either send this data directly or drop it. There's no need to hold
+ * data back. If you for any reason need the data after the callback
+ * returned, you are required to copy it.
  * `tos` contains the type of service field as reported by usrsctp.
  * `set_df` TODO: Probably don't fragment bit? Dunno...
  *
@@ -197,6 +194,18 @@ typedef enum rawrtc_code (rawrtc_sctp_transport_outbound_handler)(
     uint8_t const tos,
     uint8_t const set_df,
     void* const arg
+);
+
+/*
+ * SCTP transport detach handler.
+ * Will be called when the SCTP transport is about to be closed and
+ * should be detached from the underlying DTLS transport. At this
+ * point, no further data should be fed to the SCTP transport.
+ *
+ * `arg` is the argument passed to the SCTP transport context.
+ */
+typedef void (rawrtc_sctp_transport_detach_handler)(
+        void* const arg
 );
 
 /*
@@ -283,6 +292,7 @@ struct rawrtc_sctp_transport_context {
     rawrtc_dtls_role_getter* role_getter;
     rawrtc_dtls_transport_state_getter* state_getter;
     rawrtc_sctp_transport_outbound_handler* outbound_handler;
+    rawrtc_sctp_transport_detach_handler* detach_handler; // nullable
     rawrtc_sctp_transport_destroyed_handler* destroyed_handler; // nullable
     void* arg; // nullable
 };
@@ -308,6 +318,23 @@ enum rawrtc_code rawrtcdc_init(
  */
 enum rawrtc_code rawrtcdc_close(
     bool const close_re
+);
+
+/*
+ * Get the data transport's type and underlying transport reference.
+ * `*internal_transportp` must be unreferenced.
+ */
+enum rawrtc_code rawrtc_data_transport_get_transport(
+    enum rawrtc_data_transport_type* const typep, // de-referenced
+    void** const internal_transportp, // de-referenced
+    struct rawrtc_data_transport* const transport
+);
+
+/*
+ * Translate a data transport type to str.
+ */
+char const * rawrtc_data_transport_type_to_str(
+    enum rawrtc_data_transport_type const type
 );
 
 #ifdef SCTP_REDIRECT_TRANSPORT
@@ -371,10 +398,10 @@ enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
 );
 
 /*
- * Create an SCTP transport.
+ * Create an SCTP transport from an external DTLS transport.
  * `*transportp` must be unreferenced.
  */
-enum rawrtc_code rawrtc_sctp_transport_create(
+enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     struct rawrtc_sctp_transport** const transportp, // de-referenced
     struct rawrtc_sctp_transport_context* const context, // copied
     uint16_t port, // zeroable
@@ -422,9 +449,9 @@ enum rawrtc_code rawrtc_sctp_transport_stop(
  * Otherwise, `RAWRTC_CODE_SUCCESS` is being returned.
  */
 enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
+    struct rawrtc_sctp_transport* const transport,
     struct mbuf* const buffer,
-    uint8_t const ecn_bits,
-    void* const arg
+    uint8_t const ecn_bits
 );
 
 /*
@@ -438,6 +465,14 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
  */
 enum rawrtc_code rawrtc_sctp_transport_get_port(
     uint16_t* const portp, // de-referenced
+    struct rawrtc_sctp_transport* const transport
+);
+
+/*
+ * Get the number of streams allocated for the SCTP transport.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_n_streams(
+    uint16_t* const n_streamsp, // de-referenced
     struct rawrtc_sctp_transport* const transport
 );
 

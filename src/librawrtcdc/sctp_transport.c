@@ -480,6 +480,12 @@ static void set_state(
         // Close all data channels
         close_data_channels(transport);
 
+        // Mark as detached & detach from DTLS transport
+        transport->flags |= RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED;
+        if (transport->context.detach_handler) {
+            transport->context.detach_handler(transport->context.arg);
+        }
+
         // Close socket and deregister transport
         if (transport->socket) {
             usrsctp_close(transport->socket);
@@ -1088,16 +1094,16 @@ static int sctp_packet_handler(
         uint8_t set_df
 ) {
     struct rawrtc_sctp_transport* const transport = arg;
+    struct mbuf mbuffer;
     enum rawrtc_code error;
-    enum rawrtc_external_dtls_transport_state dtls_transport_state;
 
     // Lock event loop mutex
     // TODO: Why do we need this again? There should be no thread running in usrsctp...
     re_thread_enter();
 
-    // Closed?
-    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
-        DEBUG_PRINTF("Ignoring SCTP packet ready event, transport is closed\n");
+    // Detached?
+    if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
+        DEBUG_PRINTF("Ignoring SCTP packet ready event, transport is detached\n");
         goto out;
     }
 
@@ -1105,52 +1111,15 @@ static int sctp_packet_handler(
     // Note: No need to check if NULL as the function does it for us
     trace_packet(transport, buffer, length, SCTP_DUMP_OUTBOUND);
 
-    // Get DTLS transport state
-    error = transport->context.state_getter(&dtls_transport_state, transport->context.arg);
-    if (error) {
-        DEBUG_WARNING("Getting external DTLS transport state failed: %s\n",
-                      rawrtc_code_to_str(error));
-        return RAWRTC_CODE_EXTERNAL_ERROR;
-    }
+    // Note: We want to avoid copying if necessary. If the outbound handler needs to queue the data,
+    //       it is required to copy it.
+    mbuffer.buf = buffer;
+    mbuffer.pos = 0;
+    mbuffer.size = length;
+    mbuffer.end = length;
 
-    // Note: We only need to copy the buffer if we add it to the outgoing queue
-    if (dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CONNECTED) {
-        struct mbuf mbuffer;
-
-        // Note: dtls_send does not reference the buffer, so we can safely fake an mbuf structure
-        // to avoid copying. This may change in the future, so be aware!
-        mbuffer.buf = buffer;
-        mbuffer.pos = 0;
-        mbuffer.size = length;
-        mbuffer.end = length;
-
-        // Send
-        error = transport->context.outbound_handler(&mbuffer, tos, set_df, transport->context.arg);
-    } else {
-        int err;
-
-        // Allocate
-        struct mbuf* const mbuffer = mbuf_alloc(length);
-        if (!mbuffer) {
-            DEBUG_WARNING("Could not create buffer for outgoing packet, no memory\n");
-            goto out;
-        }
-
-        // Copy and set position
-        err = mbuf_write_mem(mbuffer, buffer, length);
-        if (err) {
-            DEBUG_WARNING("Could not write to buffer, reason: %m\n", err);
-            mem_deref(mbuffer);
-            goto out;
-        }
-        mbuf_set_pos(mbuffer, 0);
-
-        // Send (well, actually buffer...)
-        error = transport->context.outbound_handler(mbuffer, tos, set_df, transport->context.arg);
-        mem_deref(mbuffer);
-    }
-
-    // Handle error
+    // Pass to outbound handler
+    error = transport->context.outbound_handler(&mbuffer, tos, set_df, transport->context.arg);
     if (error) {
         DEBUG_WARNING("Could not send packet, reason: %s\n", rawrtc_code_to_str(error));
         goto out;
@@ -1160,7 +1129,7 @@ out:
     // Unlock event loop mutex
     re_thread_leave();
 
-    // TODO: What does the return code do?
+    // Note: The return code is irrelevant for usrsctp.
     return 0;
 }
 
@@ -1615,9 +1584,9 @@ static int read_event_handler(
     unsigned int info_type = 0;
     int flags = 0;
 
-    // Closed?
-    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
-        DEBUG_NOTICE("Ignoring read event, transport is closed\n");
+    // Detached?
+    if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
+        DEBUG_NOTICE("Ignoring read event, transport is detached\n");
         return RAWRTC_SCTP_EVENT_ALL;
     }
 
@@ -1690,9 +1659,9 @@ out:
 static int write_event_handler(
         struct rawrtc_sctp_transport* const transport // not checked
 ) {
-    // Closed?
-    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
-        DEBUG_NOTICE("Ignoring write event, transport is closed\n");
+    // Detached?
+    if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
+        DEBUG_NOTICE("Ignoring write event, transport is detached\n");
         return RAWRTC_SCTP_EVENT_ALL;
     }
 
@@ -1730,6 +1699,9 @@ static int write_event_handler(
 static bool error_event_handler(
         struct rawrtc_sctp_transport* const transport // not checked
 ) {
+    // TODO: If we want to do anything with the DTLS transport, we need to check if we are
+    //       detached already.
+
     // Closed?
     if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
         DEBUG_NOTICE("Ignoring error event, transport is closed\n");
@@ -1870,7 +1842,7 @@ enum rawrtc_code data_channels_alloc(
 }
 
 /*
- * Destructor for an existing ICE transport.
+ * Destructor for an existing SCTP transport.
  */
 static void rawrtc_sctp_transport_destroy(
         void* arg
@@ -1881,8 +1853,9 @@ static void rawrtc_sctp_transport_destroy(
     // TODO: Check effects in case transport has been destroyed due to error in create
     rawrtc_sctp_transport_stop(transport);
 
-    // Call 'destroyed' handler
-    if (transport->context.destroyed_handler) {
+    // Call 'destroyed' handler (if fully initialised)
+    if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_INITIALIZED
+        && transport->context.destroyed_handler) {
         transport->context.destroyed_handler(transport->context.arg);
     }
 
@@ -1906,10 +1879,10 @@ static void rawrtc_sctp_transport_destroy(
 }
 
 /*
- * Create an SCTP transport.
+ * Create an SCTP transport from an external DTLS transport.
  * `*transportp` must be unreferenced.
  */
-enum rawrtc_code rawrtc_sctp_transport_create(
+enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         struct rawrtc_sctp_transport** const transportp, // de-referenced
         struct rawrtc_sctp_transport_context* const context, // copied
         uint16_t port, // zeroable
@@ -1934,7 +1907,8 @@ enum rawrtc_code rawrtc_sctp_transport_create(
     }
 
     // Ensure the context contains all callbacks
-    if (!context->role_getter || !context->state_getter || !context->outbound_handler) {
+    if (!context->role_getter || !context->state_getter || !context->outbound_handler
+        || !context->detach_handler) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
     }
 
@@ -1945,8 +1919,7 @@ enum rawrtc_code rawrtc_sctp_transport_create(
                       rawrtc_code_to_str(error));
         return RAWRTC_CODE_EXTERNAL_ERROR;
     }
-    if (dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED
-        || dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_FAILED) {
+    if (dtls_transport_state == RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED_OR_FAILED) {
         return RAWRTC_CODE_INVALID_STATE;
     }
 
@@ -2196,8 +2169,9 @@ out:
     if (error) {
         mem_deref(transport);
     } else {
-        // Set pointer
+        // Set pointer & mark as initialised
         *transportp = transport;
+        transport->flags |= RAWRTC_SCTP_TRANSPORT_FLAGS_INITIALIZED;
     }
     return error;
 }
@@ -2920,17 +2894,24 @@ out:
  * Otherwise, `RAWRTC_CODE_SUCCESS` is being returned.
  */
 enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
+        struct rawrtc_sctp_transport* const transport,
         struct mbuf* const buffer,
-        uint8_t const ecn_bits,
-        void* const arg
+        uint8_t const ecn_bits
 ) {
-    struct rawrtc_sctp_transport* const transport = arg;
-    size_t const length = mbuf_get_left(buffer);
+    size_t length;
 
-    // Closed?
-    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
+    // Check arguments
+    if (!transport || !buffer) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Detached?
+    if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
         return RAWRTC_CODE_INVALID_STATE;
     }
+
+    // Get length
+    length = mbuf_get_left(buffer);
 
     // Trace (if trace handle)
     // Note: No need to check if NULL as the function does it for us
@@ -2962,6 +2943,26 @@ enum rawrtc_code rawrtc_sctp_transport_get_port(
     // Done
     return RAWRTC_CODE_SUCCESS;
 }
+
+/*
+ * Get the number of streams allocated for the SCTP transport.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_n_streams(
+        uint16_t* const n_streamsp, // de-referenced
+        struct rawrtc_sctp_transport* const transport
+) {
+    // Check arguments
+    if (!n_streamsp || !transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set #streams
+    *n_streamsp = (uint16_t) transport->n_channels;
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
 
 /*
  * Get the corresponding name for an SCTP transport state.

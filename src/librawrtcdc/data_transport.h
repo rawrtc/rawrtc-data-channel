@@ -2,13 +2,6 @@
 #include <rawrtcdc.h>
 
 /*
- * Data transport type.
- */
-enum rawrtc_data_transport_type {
-    RAWRTC_DATA_TRANSPORT_TYPE_SCTP
-};
-
-/*
  * Create the data channel (transport handler).
  */
 typedef enum rawrtc_code (rawrtc_data_transport_channel_create_handler)(
@@ -34,7 +27,7 @@ typedef enum rawrtc_code (rawrtc_data_transport_channel_send_handler)(
 );
 
 struct rawrtc_data_transport {
-    enum rawrtc_data_transport_type type; // TODO: Can this be removed?
+    enum rawrtc_data_transport_type type;
     void* transport;
     rawrtc_data_transport_channel_create_handler* channel_create;
     rawrtc_data_transport_channel_close_handler* channel_close;
@@ -73,8 +66,4 @@ void rawrtc_data_channel_call_channel_handler(
     struct rawrtc_data_channel* const channel, // not checked
     rawrtc_data_channel_handler* const channel_handler, // nullable
     void* const arg
-);
-
-char const * rawrtc_data_transport_type_to_str(
-    enum rawrtc_data_transport_type const type
 );
