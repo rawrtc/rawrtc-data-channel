@@ -217,7 +217,7 @@ typedef enum rawrtc_code (rawrtc_sctp_transport_outbound_handler)(
  * `arg` is the argument passed to the SCTP transport context.
  */
 typedef void (rawrtc_sctp_transport_detach_handler)(
-        void* const arg
+    void* const arg
 );
 
 /*
