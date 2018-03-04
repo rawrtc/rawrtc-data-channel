@@ -1097,10 +1097,6 @@ static int sctp_packet_handler(
     struct mbuf mbuffer;
     enum rawrtc_code error;
 
-    // Lock event loop mutex
-    // TODO: Why do we need this again? There should be no thread running in usrsctp...
-    re_thread_enter();
-
     // Detached?
     if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
         DEBUG_PRINTF("Ignoring SCTP packet ready event, transport is detached\n");
@@ -1126,9 +1122,6 @@ static int sctp_packet_handler(
     }
 
 out:
-    // Unlock event loop mutex
-    re_thread_leave();
-
     // Note: The return code is irrelevant for usrsctp.
     return 0;
 }
@@ -1729,9 +1722,6 @@ static void upcall_handler_helper(
     int ignore_events = RAWRTC_SCTP_EVENT_NONE;
     (void) flags; // TODO: What does this indicate?
 
-    // Lock event loop mutex
-    re_thread_enter();
-
     // TODO: This loop may lead to long blocking and is unfair to normal fds.
     //       It's a compromise because scheduling repetitive timers in re's event loop seems to
     //       be slow.
@@ -1758,9 +1748,6 @@ static void upcall_handler_helper(
         // Get upcoming events and remove events that should be ignored
         events = usrsctp_get_events(socket) & ~ignore_events;
     }
-
-    // Unlock event loop mutex
-    re_thread_leave();
 }
 
 /*

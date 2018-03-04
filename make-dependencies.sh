@@ -106,7 +106,15 @@ if [ -z "$SKIP_USRSCTP" ]; then
     echo "Configuring usrsctp"
     # TODO: Disable "-Wno-address-of-packed-member" once usrsctp has fixed this
     CFLAGS="-fPIC -Wno-unknown-warning-option -Wno-address-of-packed-member" \
-    cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} -DSCTP_DEBUG=1 ..
+    # SCTP_DEBUG: We need this since this is a compile time flag in RAWRTCDC
+    # THREAD_SUPPORT: We explicitly don't want any threads running
+    # SCTP_WITH_NO_CSUM: There's no need to verify the payload checksum since DTLS already does
+    #                    that.
+    cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+    -DSCTP_DEBUG=ON \
+    -DTHREAD_SUPPORT=OFF \
+    -DSCTP_WITH_NO_CSUM=OFF \
+    ..
     echo "Cleaning usrsctp"
     make clean
     echo "Building & installing usrsctp"

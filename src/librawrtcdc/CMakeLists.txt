@@ -35,14 +35,6 @@ target_link_libraries(rawrtcdc-static
 install(TARGETS rawrtcdc rawrtcdc-static
         DESTINATION lib)
 
-# Dependency: Threads (optional)
-if (Threads_FOUND)
-    target_compile_definitions(rawrtcdc PRIVATE HAVE_PTHREAD)
-    target_compile_definitions(rawrtcdc-static PRIVATE HAVE_PTHREAD)
-    list(APPEND rawrtcdc_DEP_LIBRARIES
-            Threads::Threads)
-endif ()
-
 if (SCTP_REDIRECT_TRANSPORT)
     # And set the preprocessor variable
     target_compile_definitions(rawrtcdc PRIVATE SCTP_REDIRECT_TRANSPORT)
