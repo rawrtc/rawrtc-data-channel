@@ -34,7 +34,6 @@ set(SCTP_REDIRECT_TRANSPORT OFF CACHE BOOL "Build the SCTP redirect transport to
 
 # Use pkg-config
 find_package(PkgConfig REQUIRED)
-find_package(Threads)
 
 # Dependency list
 set(rawrtcdc_DEP_LIBRARIES)
