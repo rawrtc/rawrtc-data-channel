@@ -146,6 +146,18 @@ struct rawrtc_sctp_capabilities;
 
 
 /*
+ * Timer handler.
+ *
+ * If `on` is set to `true`, a timer needs to be scheduled to call
+ * `rawrtc_timer_tick` every `interval` milliseconds.
+ * If `on` is set to `false`, the timer needs to be cancelled.
+ */
+typedef enum rawrtc_code (rawrtcdc_timer_handler)(
+    bool const on,
+    uint_fast16_t const interval
+);
+
+/*
  * DTLS role getter.
  *
  * `*rolep` will contain the current external DTLS role.
@@ -300,24 +312,33 @@ struct rawrtc_sctp_transport_context {
 
 
 /*
- * Initialise rawrtcdc. Must be called before making a call to any
+ * Initialise RAWRTCDC. Must be called before making a call to any
  * other function.
  *
- * Note: In case `init_re` is not set to `true`, you MUST initialise
- *       re yourselves before calling this function.
+ * Note: In case you override the default mutex used by re it's vital
+ *       that you create a recursive mutex or you will get deadlocks!
  */
 enum rawrtc_code rawrtcdc_init(
-    bool const init_re
+    bool const init_re,
+    rawrtcdc_timer_handler* const timer_handler
 );
 
 /*
- * Close rawrtcdc and free up all resources.
+ * Close RAWRTCDC and free up all resources.
  *
  * Note: In case `close_re` is not set to `true`, you MUST close
  *       re yourselves.
  */
 enum rawrtc_code rawrtcdc_close(
     bool const close_re
+);
+
+/*
+ * Handle timer tick.
+ * `delta` contains the delta milliseconds passed between calls.
+ */
+inline void rawrtcdc_timer_tick(
+    uint_fast16_t const delta
 );
 
 /*
@@ -452,6 +473,46 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     struct rawrtc_sctp_transport* const transport,
     struct mbuf* const buffer,
     uint8_t const ecn_bits
+);
+
+/*
+ * Set the SCTP transport's maximum transmission unit (MTU).
+ * This will disable MTU discovery.
+ *
+ * If `mtu` is set to `0`, it will be overridden with the recommended
+ * default MTU (IPv4) which is `1200`.
+ * The resulting MTU will be set to `mtu - mtu_headroom - 12` (12 bytes
+ * for the SCTP common header).
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_mtu(
+    struct rawrtc_sctp_transport* const transport,
+    uint32_t mtu, // zeroable
+    uint32_t const mtu_headroom // zeroable
+);
+
+/*
+ * Get the current SCTP transport's maximum transmission unit (MTU)
+ * and an indication whether MTU discovery is enabled.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_mtu(
+    uint32_t* const mtup, // de-referenced
+    bool* const mtu_discovery_enabledp, // de-referenced
+    struct rawrtc_sctp_transport* const transport
+);
+
+/*
+ * Enable MTU discovery for the SCTP transport.
+ */
+enum rawrtc_code rawrtc_sctp_transport_enable_mtu_discovery(
+    struct rawrtc_sctp_transport* const transport
+);
+
+/*
+ * Set the SCTP transport's context.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_context(
+    struct rawrtc_sctp_transport* const transport,
+    struct rawrtc_sctp_transport_context* const context // copied
 );
 
 /*

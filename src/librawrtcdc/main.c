@@ -1,6 +1,8 @@
+#include <limits.h> // INT_MAX
 #ifdef HAVE_PTHREAD
 #include <pthread.h> // pthread_*
 #endif
+#include <usrsctp.h>
 #include <rawrtcdc.h>
 #include "main.h"
 
@@ -11,19 +13,25 @@
 struct rawrtcdc_global rawrtcdc_global;
 
 /*
- * Initialise rawrtc. Must be called before making a call to any other
- * function.
+ * Initialise RAWRTCDC. Must be called before making a call to any
+ * other function.
  *
  * Note: In case you override the default mutex used by re it's vital
  *       that you create a recursive mutex or you will get deadlocks!
  */
 enum rawrtc_code rawrtcdc_init(
-        bool const init_re
+        bool const init_re,
+        rawrtcdc_timer_handler* const timer_handler
 ) {
     int err;
 #ifdef HAVE_PTHREAD
     pthread_mutexattr_t mutex_attribute;
 #endif
+
+    // Check arguments
+    if (!timer_handler) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
 
     // Initialise re (if requested)
     if (init_re) {
@@ -57,6 +65,9 @@ enum rawrtc_code rawrtcdc_init(
     re_set_mutex(&rawrtcdc_global.mutex);
 #endif
 
+    // Set timer handler
+    rawrtcdc_global.timer_handler = timer_handler;
+
     // Set usrsctp initialised counter
     rawrtcdc_global.usrsctp_initialized = 0;
 
@@ -65,7 +76,7 @@ enum rawrtc_code rawrtcdc_init(
 }
 
 /*
- * Close rawrtc and free up all resources.
+ * Close RAWRTCDC and free up all resources.
  *
  * Note: In case `close_re` is not set to `true`, you MUST close
  *       re yourselves.
@@ -76,6 +87,9 @@ enum rawrtc_code rawrtcdc_close(
     int err;
 
     // TODO: Close usrsctp if initialised
+
+    // Remove timer handler
+    rawrtcdc_global.timer_handler = NULL;
 
 #ifdef HAVE_PTHREAD
     // Destroy mutex
@@ -92,4 +106,19 @@ enum rawrtc_code rawrtcdc_close(
 
     // Done
     return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Handle timer tick.
+ * `delta` contains the delta milliseconds passed between calls.
+ */
+inline void rawrtcdc_timer_tick(
+        uint_fast16_t const delta
+) {
+    // Pass delta ms to usrsctp
+#if (UINT16_MAX > INT_MAX)
+    usrsctp_handle_timers(delta > INT_MAX ? INT_MAX : ((int) delta));
+#else
+    usrsctp_handle_timers((int) delta);
+#endif
 }

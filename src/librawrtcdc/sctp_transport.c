@@ -2,7 +2,7 @@
 #include <string.h> // memcpy, strlen
 #include <errno.h> // errno
 #include <sys/socket.h> // AF_INET, SOCK_STREAM, linger
-#include <netinet/in.h> // IPPROTO_UDP, IPPROTO_TCP, htons
+#include <netinet/in.h> // IPPROTO_UDP, IPPROTO_TCP, htons, INADDR_ANY
 #if (RAWRTC_DEBUG_LEVEL >= 7)
     #define SCTP_DEBUG
 #endif
@@ -1764,22 +1764,6 @@ static void upcall_handler_helper(
 }
 
 /*
- * Handle SCTP timer tick.
- */
-static void timer_handler(
-        void* arg
-) {
-    (void) arg;
-
-    // Restart timer
-    tmr_start(&rawrtcdc_global.usrsctp_tick_timer, RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT,
-              timer_handler, NULL);
-
-    // Pass delta ms to usrsctp
-    usrsctp_handle_timers(RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT);
-}
-
-/*
  * Destructor for an existing SCTP data channel array.
  */
 static void data_channels_destroy(
@@ -1841,6 +1825,18 @@ enum rawrtc_code data_channels_alloc(
     return RAWRTC_CODE_SUCCESS;
 }
 
+static enum rawrtc_code validate_context(
+        struct rawrtc_sctp_transport_context* const context // not checked
+) {
+    // Ensure the context contains all callbacks
+    if (!context->role_getter || !context->state_getter || !context->outbound_handler
+        || !context->detach_handler) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    } else {
+        return RAWRTC_CODE_SUCCESS;
+    }
+}
+
 /*
  * Destructor for an existing SCTP transport.
  */
@@ -1870,7 +1866,10 @@ static void rawrtc_sctp_transport_destroy(
     // Close usrsctp (if needed)
     if (rawrtcdc_global.usrsctp_initialized == 0) {
         // Cancel timer
-        tmr_cancel(&rawrtcdc_global.usrsctp_tick_timer);
+        enum rawrtc_code error = rawrtcdc_global.timer_handler(false, 0);
+        if (error) {
+            DEBUG_WARNING("Unable to cancel timer, reason: %s\n", rawrtc_code_to_str(error));
+        }
 
         // Close
         usrsctp_finish();
@@ -1907,9 +1906,9 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     }
 
     // Ensure the context contains all callbacks
-    if (!context->role_getter || !context->state_getter || !context->outbound_handler
-        || !context->detach_handler) {
-        return RAWRTC_CODE_INVALID_ARGUMENT;
+    error = validate_context(context);
+    if (error) {
+        return error;
     }
 
     // Check DTLS transport state
@@ -1973,11 +1972,6 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         // Enable interleaving messages for different streams (incoming)
         // See: https://tools.ietf.org/html/rfc6458#section-8.1.20
         usrsctp_sysctl_set_sctp_default_frag_interleave(2);
-
-        // Start timers
-        tmr_init(&rawrtcdc_global.usrsctp_tick_timer);
-        tmr_start(&rawrtcdc_global.usrsctp_tick_timer, RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT,
-                  timer_handler, NULL);
     }
 
     // Allocate
@@ -1998,6 +1992,15 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     transport->state_change_handler = state_change_handler;
     transport->arg = arg;
     list_init(&transport->buffered_messages_outgoing);
+
+    // Start timer (if needed)
+    if (rawrtcdc_global.usrsctp_initialized == 1) {
+        error = rawrtcdc_global.timer_handler(
+                true, (uint_fast16_t) RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT);
+        if (error) {
+            goto out;
+        }
+    }
 
     // Allocate channel array
     error = data_channels_alloc(&transport->channels, n_channels, 0);
@@ -2092,8 +2095,12 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         goto out;
     }
 
-    // TODO: Set MTU (1200|1280 (IPv4|IPv6) - UDP - DTLS (cipher suite dependent) - SCTP (12)
-    // https://github.com/ortclib/ortclib-cpp/blob/master/ortc/cpp/ortc_SCTPTransport.cpp#L2143
+    // Set default MTU
+    error = rawrtc_sctp_transport_set_mtu(transport, 0, 0);
+    if (error) {
+        DEBUG_WARNING("Could not set MTU, reason: %s\n", rawrtc_code_to_str(error));
+        goto out;
+    }
 
     // We want info
     option_value = 1;
@@ -2107,6 +2114,14 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
 
     // TODO: Enable interleaving messages for different streams (outgoing)
     // https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-ndata-08#section-4.3.1
+//    av.assoc_id = SCTP_FUTURE_ASSOC;
+//    av.assoc_value = 1;
+//    if (usrsctp_setsockopt(transport->socket, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED,
+//                           &av, sizeof(struct sctp_assoc_value))) {
+//        DEBUG_WARNING("Could not enable ndata, reason: %m\n", errno);
+//        error = rawrtc_error_to_code(errno);
+//        goto out;
+//    }
 
     // Discard pending packets when closing
     // (so we don't get a callback when the transport is already free'd)
@@ -2920,6 +2935,157 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     // Feed into SCTP socket
     DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
     usrsctp_conninput(transport, mbuf_buf(buffer), length, ecn_bits);
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Set the SCTP transport's maximum transmission unit (MTU).
+ * This will disable MTU discovery.
+ *
+ * If `mtu` is set to `0`, it will be overridden with the recommended
+ * default MTU (IPv4) which is `1200`.
+ * The resulting MTU will be set to `mtu - mtu_headroom - 12` (12 bytes
+ * for the SCTP common header).
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_mtu(
+        struct rawrtc_sctp_transport* const transport,
+        uint32_t mtu, // zeroable
+        uint32_t const mtu_headroom // zeroable
+) {
+    struct sctp_paddrparams peer_address_parameters = {0};
+
+    // Check arguments
+    if (!transport || !transport->socket) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set default MTU (if not provided)
+    if (mtu == 0) {
+        mtu = (uint32_t) RAWRTC_SCTP_TRANSPORT_DEFAULT_MTU;
+    }
+
+    // Validate MTU & headroom
+    if (mtu_headroom >= (mtu - RAWRTC_SCTP_TRANSPORT_COMMON_HEADER_SIZE)) {
+        DEBUG_WARNING("MTU headroom %"PRIu32" >= MTU %"PRIu32"\n", mtu_headroom, mtu);
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set fixed MTU
+    // TODO: Check that the correct MTU is applied
+    // See: https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13#section-5
+    // .spp_assoc_id is being ignored for 1:1 associations
+    // .spp_address is a wildcard address by default (at least I hope it is because
+    //              sockaddr_storage is awful to work with)
+    peer_address_parameters.spp_flags = SPP_PMTUD_DISABLE;
+    peer_address_parameters.spp_pathmtu =
+            mtu - mtu_headroom - RAWRTC_SCTP_TRANSPORT_COMMON_HEADER_SIZE;
+    if (usrsctp_setsockopt(transport->socket, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
+                           &peer_address_parameters, sizeof(peer_address_parameters))) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Done
+    DEBUG_PRINTF("Set MTU to %"PRIu32" (and disabled MTU discovery)\n", mtu);
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the current SCTP transport's maximum transmission unit (MTU)
+ * and an indication whether MTU discovery is enabled.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_mtu(
+        uint32_t* const mtup, // de-referenced
+        bool* const mtu_discovery_enabledp, // de-referenced
+        struct rawrtc_sctp_transport* const transport
+) {
+    struct sctp_paddrparams peer_address_parameters = {0};
+    socklen_t option_size;
+
+    // Check arguments
+    if (!mtup || !mtu_discovery_enabledp || !transport || !transport->socket) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Get MTU info
+    option_size = sizeof(peer_address_parameters);
+    if (usrsctp_getsockopt(transport->socket, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
+                           &peer_address_parameters, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Check value
+    if (option_size != sizeof(peer_address_parameters)) {
+        return RAWRTC_CODE_EXTERNAL_ERROR;
+    }
+
+    // Set value
+    *mtu_discovery_enabledp = (bool) (peer_address_parameters.spp_flags & SPP_PMTUD_ENABLE);
+    if (*mtu_discovery_enabledp) {
+        *mtup = peer_address_parameters.spp_pathmtu;
+    } else {
+        *mtup = 0;
+    }
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Enable MTU discovery for the SCTP transport.
+ */
+enum rawrtc_code rawrtc_sctp_transport_enable_mtu_discovery(
+        struct rawrtc_sctp_transport* const transport
+) {
+    struct sctp_paddrparams peer_address_parameters = {0};
+
+    // Check arguments
+    if (!transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // TODO: Re-enable support for path MTU (ask @tuexen about the current state)
+    return RAWRTC_CODE_NOT_IMPLEMENTED;
+
+    // Set MTU discovery
+    // See: https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13#section-5
+    // .spp_assoc_id is being ignored for 1:1 associations
+    // .spp_address is a wildcard address by default (at least I hope it is because
+    //              sockaddr_storage is awful to work with)
+    peer_address_parameters.spp_flags = SPP_PMTUD_ENABLE;
+    if (usrsctp_setsockopt(transport->socket, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
+                           &peer_address_parameters, sizeof(peer_address_parameters))) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Done
+    DEBUG_PRINTF("Enabled MTU discovery\n");
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Set the SCTP transport's context.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_context(
+        struct rawrtc_sctp_transport* const transport,
+        struct rawrtc_sctp_transport_context* const context // copied
+) {
+    enum rawrtc_code error;
+
+    // Check arguments
+    if (!transport || !context) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Ensure the context contains all callbacks
+    error = validate_context(context);
+    if (error) {
+        return error;
+    }
+
+    // Set context
+    transport->context = *context;
 
     // Done
     return RAWRTC_CODE_SUCCESS;
