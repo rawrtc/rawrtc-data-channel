@@ -65,7 +65,7 @@ enum rawrtc_code rawrtcdc_close(
  * Handle timer tick.
  * `delta` contains the delta milliseconds passed between calls.
  */
-inline void rawrtcdc_timer_tick(
+void rawrtcdc_timer_tick(
         uint_fast16_t const delta
 ) {
     // Pass delta ms to usrsctp
