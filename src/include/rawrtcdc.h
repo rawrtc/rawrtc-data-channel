@@ -84,6 +84,13 @@ enum rawrtc_sctp_transport_state {
 };
 
 /*
+ * SCTP transport default MTU
+ */
+enum {
+    RAWRTC_SCTP_TRANSPORT_DEFAULT_MTU = 1200
+};
+
+/*
  * Data channel state.
  */
 enum rawrtc_data_channel_state {
@@ -479,20 +486,20 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
  * Set the SCTP transport's maximum transmission unit (MTU).
  * This will disable MTU discovery.
  *
- * If `mtu` is set to `0`, it will be overridden with the recommended
- * default MTU (IPv4) which is `1200`.
- * The resulting MTU will be set to `mtu - mtu_headroom - 12` (12 bytes
- * for the SCTP common header).
+ * Note: The MTU cannot be set before the SCTP transport has been
+ *       started.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_mtu(
     struct rawrtc_sctp_transport* const transport,
-    uint32_t mtu, // zeroable
-    uint32_t const mtu_headroom // zeroable
+    uint32_t mtu
 );
 
 /*
  * Get the current SCTP transport's maximum transmission unit (MTU)
  * and an indication whether MTU discovery is enabled.
+ *
+ * Note: The MTU cannot be retrieved before the SCTP transport has been
+ *       started.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_mtu(
     uint32_t* const mtup, // de-referenced
@@ -502,6 +509,9 @@ enum rawrtc_code rawrtc_sctp_transport_get_mtu(
 
 /*
  * Enable MTU discovery for the SCTP transport.
+ *
+ * Note: MTU discovery cannot be enabled before the SCTP transport has
+ *       been started.
  */
 enum rawrtc_code rawrtc_sctp_transport_enable_mtu_discovery(
     struct rawrtc_sctp_transport* const transport

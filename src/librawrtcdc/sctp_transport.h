@@ -13,10 +13,8 @@
 enum {
     RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT = 10,
     RAWRTC_SCTP_TRANSPORT_DEFAULT_PORT = 5000,
-    RAWRTC_SCTP_TRANSPORT_COMMON_HEADER_SIZE = 12,
     // As specified by https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13#section-5
     // Using IPv4 default (1200)
-    RAWRTC_SCTP_TRANSPORT_DEFAULT_MTU = 1200,
     RAWRTC_SCTP_TRANSPORT_DEFAULT_NUMBER_OF_STREAMS = 65535,
     RAWRTC_SCTP_TRANSPORT_SID_MAX = 65534,
     RAWRTC_SCTP_TRANSPORT_EMPTY_MESSAGE_SIZE = 1
@@ -85,6 +83,7 @@ struct rawrtc_sctp_transport {
     struct rawrtc_sctp_transport_context context;
     enum rawrtc_sctp_transport_state state;
     uint16_t port;
+    struct sockaddr_conn remote_address;
     uint64_t remote_maximum_message_size;
     rawrtc_data_channel_handler* data_channel_handler; // nullable
     rawrtc_sctp_transport_state_change_handler* state_change_handler; // nullable
