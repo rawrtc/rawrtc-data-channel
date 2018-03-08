@@ -1,5 +1,6 @@
 # Library sources
 set(rawrtcdc_SOURCES
+        crc32c.c
         data_channel.c
         data_channel_options.c
         data_channel_parameters.c
@@ -10,6 +11,7 @@ set(rawrtcdc_SOURCES
 
 # Library internal headers
 set(rawrtcdc_HEADERS
+        crc32c.h
         data_channel.h
         data_channel_options.h
         data_channel_parameters.h
@@ -18,7 +20,7 @@ set(rawrtcdc_HEADERS
         sctp_capabilities.h
         sctp_transport.h)
 
-# If we are building the SCTP redirect transport tool
+# Optional: SCTP redirect transport tool sources
 if (SCTP_REDIRECT_TRANSPORT)
     # Add the relevant source files
     list(APPEND rawrtcdc_SOURCES
@@ -35,10 +37,17 @@ target_link_libraries(rawrtcdc-static
 install(TARGETS rawrtcdc rawrtcdc-static
         DESTINATION lib)
 
+# Optional: SCTP redirect transport tool definitions
 if (SCTP_REDIRECT_TRANSPORT)
     # And set the preprocessor variable
     target_compile_definitions(rawrtcdc PRIVATE SCTP_REDIRECT_TRANSPORT)
     target_compile_definitions(rawrtcdc-static PRIVATE SCTP_REDIRECT_TRANSPORT)
+endif ()
+
+# ARM: Disable hardware CRC32-C (which requires SSE 4.2)
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+    target_compile_definitions(rawrtcdc PRIVATE DISABLE_HW_CRC32C)
+    target_compile_definitions(rawrtcdc-static PRIVATE DISABLE_HW_CRC32C)
 endif ()
 
 # Generate internal headers & install them

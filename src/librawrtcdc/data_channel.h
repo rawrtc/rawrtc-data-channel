@@ -9,6 +9,13 @@ enum {
     RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS = 1 << 1,
 };
 
+/*
+ * Data channel type unordered bit flag.
+ */
+enum {
+    RAWRTC_DATA_CHANNEL_TYPE_IS_UNORDERED = 0x80
+};
+
 struct rawrtc_data_channel {
     uint_fast8_t flags;
     enum rawrtc_data_channel_state state;

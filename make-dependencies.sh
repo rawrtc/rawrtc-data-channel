@@ -113,7 +113,6 @@ if [ -z "$SKIP_USRSCTP" ]; then
     cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
     -DSCTP_DEBUG=ON \
     -DTHREAD_SUPPORT=OFF \
-    -DSCTP_WITH_NO_CSUM=OFF \
     ..
     echo "Cleaning usrsctp"
     make clean

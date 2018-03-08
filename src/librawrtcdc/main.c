@@ -1,6 +1,7 @@
 #include <limits.h> // INT_MAX
 #include <usrsctp.h>
 #include <rawrtcdc.h>
+#include "crc32c.h"
 #include "main.h"
 
 struct rawrtcdc_global rawrtcdc_global;
@@ -27,6 +28,9 @@ enum rawrtc_code rawrtcdc_init(
             return RAWRTC_CODE_INITIALISE_FAIL;
         }
     }
+
+    // Initialise CRC32-C
+    rawrtc_crc32c_init();
 
     // Set timer handler
     rawrtcdc_global.timer_handler = timer_handler;
