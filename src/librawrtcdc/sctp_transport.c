@@ -5,6 +5,7 @@
 #include <netinet/in.h> // IPPROTO_UDP, IPPROTO_TCP, htons, INADDR_ANY
 #include <rawrtcc/internal/message_buffer.h>
 #include <rawrtcdc.h>
+#include "crc32c.h"
 #include "main.h"
 #include "data_transport.h"
 #include "data_channel_options.h"
@@ -24,6 +25,9 @@
 //       Importing 'sctp_transport.h' afterwards since it also imports 'usrsctp.h'
 #include <usrsctp.h> // usrsctp*
 #include "sctp_transport.h"
+
+// TODO: Get from config
+uint8_t checksum_flags = RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_INBOUND;
 
 // SCTP outgoing message context (needed when buffering)
 struct send_context {
@@ -1107,6 +1111,18 @@ static int sctp_packet_handler(
         goto out;
     }
 
+    // Calculate CRC32C checksum
+    if (!(checksum_flags & RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_OUTBOUND)) {
+        if (length >= sizeof(struct sctp_common_header)) {
+            struct sctp_common_header* const header = buffer;
+            // Note: The resulting checksum will be in network byte order
+            header->crc32c = rawrtc_crc32c(0x00000000, buffer, length);
+        } else {
+            DEBUG_WARNING("Outbound packet too short (%zu bytes), please report this!\n", length);
+            goto out;
+        }
+    }
+
     // Trace (if trace handle)
     // Note: No need to check if NULL as the function does it for us
     trace_packet(transport, buffer, length, SCTP_DUMP_OUTBOUND);
@@ -1366,7 +1382,7 @@ static void handle_application_message(
 ) {
     enum rawrtc_code error;
     struct rawrtc_sctp_data_channel_context* context = NULL;
-    enum rawrtc_data_channel_message_flag message_flags = RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_NONE;
+    enum rawrtc_data_channel_message_flag message_flags = (enum rawrtc_data_channel_message_flag) 0;
 
     // Get channel and context
     struct rawrtc_data_channel* const channel = transport->channels[info->rcv_sid];
@@ -1440,6 +1456,7 @@ static void handle_application_message(
         case RAWRTC_SCTP_TRANSPORT_PPID_UTF16:
         case RAWRTC_SCTP_TRANSPORT_PPID_UTF16_EMPTY:
         case RAWRTC_SCTP_TRANSPORT_PPID_UTF16_PARTIAL:
+            message_flags |= RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_STRING;
             break;
         case RAWRTC_SCTP_TRANSPORT_PPID_BINARY:
         case RAWRTC_SCTP_TRANSPORT_PPID_BINARY_EMPTY:
@@ -1914,7 +1931,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     }
 
     // Set number of channels
-    // TODO: Get from config
+    // TODO: Get from config or remove this option
     n_channels = RAWRTC_SCTP_TRANSPORT_DEFAULT_NUMBER_OF_STREAMS;
 
     // Set default port (if 0)
@@ -1937,6 +1954,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         usrsctp_sysctl_set_sctp_blackhole(2);
 
         // Disable the Explicit Congestion Notification extension
+        // TODO: Do we want to re-enable this?
         usrsctp_sysctl_set_sctp_ecn_enable(0);
 
         // Disable the Address Reconfiguration extension
@@ -1963,6 +1981,11 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         // Enable interleaving messages for different streams (incoming)
         // See: https://tools.ietf.org/html/rfc6458#section-8.1.20
         usrsctp_sysctl_set_sctp_default_frag_interleave(2);
+
+        // Disable default CRC32C checksum calculation
+        // Note: We may or may not calculate and verify the checksum depending on the
+        //       configuration.
+        usrsctp_enable_crc32c_offload();
     }
 
     // Allocate
@@ -2582,7 +2605,7 @@ enum rawrtc_code rawrtc_sctp_transport_start(
         uint16_t remote_port // zeroable
 ) {
     struct sockaddr_conn peer = {0};
-    enum rawrtc_code error = RAWRTC_CODE_SUCCESS;
+    enum rawrtc_code error;
 
     // Check arguments
     if (!transport || !remote_capabilities) {
@@ -2907,6 +2930,7 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
         struct mbuf* const buffer,
         uint8_t const ecn_bits
 ) {
+    void* raw_buffer;
     size_t length;
 
     // Check arguments
@@ -2919,16 +2943,44 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
         return RAWRTC_CODE_INVALID_STATE;
     }
 
-    // Get length
+    // Get buffer & length
+    raw_buffer = mbuf_buf(buffer);
     length = mbuf_get_left(buffer);
 
     // Trace (if trace handle)
     // Note: No need to check if NULL as the function does it for us
-    trace_packet(transport, mbuf_buf(buffer), length, SCTP_DUMP_INBOUND);
+    trace_packet(transport, raw_buffer, length, SCTP_DUMP_INBOUND);
+
+    // Verify CRC32C checksum
+    if (!(checksum_flags & RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_INBOUND)) {
+        if (length >= sizeof(struct sctp_common_header)) {
+            struct sctp_common_header* const header = raw_buffer;
+            uint32_t const actual_checksum = header->crc32c;
+            uint32_t expected_checksum;
+
+            // Calculate checksum
+            // Note: The field is still in network byte order (even though we don't convert the zeroes).
+            //       Furthermore, the result from `usrsctp_crc32c` is also in network byte order.
+            header->crc32c = 0x00000000;
+            expected_checksum = rawrtc_crc32c(0x00000000, raw_buffer, length);
+            header->crc32c = actual_checksum;
+
+            // Verify checksum is correct
+            if (actual_checksum != expected_checksum) {
+                DEBUG_NOTICE(
+                        "Inbound packet has invalid CRC32C checksum, expected=%08x, actual=%08x\n",
+                        ntohl(expected_checksum), ntohl(actual_checksum));
+                return RAWRTC_CODE_INVALID_MESSAGE;
+            }
+        } else {
+            DEBUG_WARNING("Inbound packet too short (%zu bytes)!\n", length);
+            return RAWRTC_CODE_INVALID_MESSAGE;
+        }
+    }
 
     // Feed into SCTP socket
     DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
-    usrsctp_conninput(transport, mbuf_buf(buffer), length, ecn_bits);
+    usrsctp_conninput(transport, raw_buffer, length, ecn_bits);
 
     // Done
     return RAWRTC_CODE_SUCCESS;

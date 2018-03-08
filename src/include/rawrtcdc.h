@@ -43,13 +43,6 @@ enum rawrtc_data_transport_type {
 };
 
 /*
- * Data channel is unordered bit flag.
- */
-enum {
-    RAWRTC_DATA_CHANNEL_TYPE_IS_UNORDERED = 0x80
-};
-
-/*
  * Data channel types.
  */
 enum rawrtc_data_channel_type {
@@ -67,10 +60,21 @@ enum rawrtc_data_channel_type {
  * Data channel message flags.
  */
 enum rawrtc_data_channel_message_flag {
-    RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_NONE = 1 << 0,
-    RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_ABORTED = 1 << 1,
-    RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_COMPLETE = 1 << 2,
+    RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_ABORTED = 1 << 0,
+    RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_COMPLETE = 1 << 1,
+    RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_STRING = 1 << 2,
     RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_BINARY = 1 << 3,
+};
+
+/*
+ * SCTP transport checksum configuration flags.
+ * TODO: Add configuration to make these applyable.
+ */
+enum rawrtc_sctp_transport_checksum_flags {
+    RAWRTC_SCTP_TRANSPORT_CHECKSUM_ENABLE_ALL = 0,
+    RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_INBOUND = 1 << 0,
+    RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_OUTBOUND = 1 << 1,
+    RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_ALL = (1 << 0 | 1 << 1),
 };
 
 /*
