@@ -35,6 +35,17 @@ enum rawrtc_external_dtls_transport_state {
     RAWRTC_EXTERNAL_DTLS_TRANSPORT_STATE_CLOSED_OR_FAILED,
 };
 
+#ifdef SCTP_REDIRECT_TRANSPORT
+/*
+ * SCTP redirect transport states.
+ */
+enum rawrtc_sctp_redirect_transport_state {
+    RAWRTC_SCTP_REDIRECT_TRANSPORT_STATE_NEW,
+    RAWRTC_SCTP_REDIRECT_TRANSPORT_STATE_OPEN,
+    RAWRTC_SCTP_REDIRECT_TRANSPORT_STATE_CLOSED
+};
+#endif
+
 /*
  * Data transport type.
  */
@@ -103,17 +114,6 @@ enum rawrtc_data_channel_state {
     RAWRTC_DATA_CHANNEL_STATE_CLOSING,
     RAWRTC_DATA_CHANNEL_STATE_CLOSED
 };
-
-#ifdef SCTP_REDIRECT_TRANSPORT
-/*
- * SCTP redirect transport states.
- */
-enum rawrtc_sctp_redirect_transport_state {
-    RAWRTC_SCTP_REDIRECT_TRANSPORT_STATE_NEW,
-    RAWRTC_SCTP_REDIRECT_TRANSPORT_STATE_OPEN,
-    RAWRTC_SCTP_REDIRECT_TRANSPORT_STATE_CLOSED
-};
-#endif
 
 
 
@@ -238,6 +238,16 @@ typedef void (rawrtc_sctp_transport_detach_handler)(
 typedef void (rawrtc_sctp_transport_destroyed_handler)(
     void* const arg
 );
+
+#ifdef SCTP_REDIRECT_TRANSPORT
+/*
+ * SCTP redirect transport state change handler.
+ */
+typedef void (rawrtc_sctp_redirect_transport_state_change_handler)(
+    enum rawrtc_sctp_redirect_transport_state const state,
+    void* const arg
+);
+#endif
 
 /*
  * SCTP transport state change handler.
@@ -367,15 +377,28 @@ char const * rawrtc_data_transport_type_to_str(
 
 #ifdef SCTP_REDIRECT_TRANSPORT
 /*
- * Create an SCTP redirect transport.
+ * Create an SCTP redirect transport from an external DTLS transport.
  * `*transportp` must be unreferenced.
+ *
+ * `port` defaults to `5000` if set to `0`.
+ * `redirect_ip` is the target IP SCTP packets will be redirected to
+ *  and must be a IPv4 address.
+ * `redirect_port` is the target SCTP port packets will be redirected
+ *  to.
+ *
+ * Note: The underlying DTLS transport is supposed to be immediately
+ *       attached after creation of this transport.
+ * Important: The redirect transport requires to be run inside re's
+ *            event loop (`re_main`).
  */
-enum rawrtc_code rawrtc_sctp_redirect_transport_create(
+enum rawrtc_code rawrtc_sctp_redirect_transport_create_from_external(
     struct rawrtc_sctp_redirect_transport** const transportp, // de-referenced
-    struct rawrtc_dtls_transport* const dtls_transport, // referenced
+    struct rawrtc_sctp_transport_context* const context, // copied
     uint16_t const port, // zeroable
     char* const redirect_ip, // copied
-    uint16_t const redirect_port
+    uint16_t const redirect_port,
+    rawrtc_sctp_redirect_transport_state_change_handler* const state_change_handler, // nullable
+    void* const arg // nullable
 );
 
 /*
@@ -395,6 +418,35 @@ enum rawrtc_code rawrtc_sctp_redirect_transport_stop(
 );
 
 /*
+ * Feed inbound data to the SCTP redirect transport (that will be sent
+ * out via the raw socket).
+ *
+ * `buffer` contains the data to be fed to the raw transport. Since
+ * the data is not going to be referenced, you can pass a *fake* `mbuf`
+ * structure that hasn't been allocated with `mbuf_alloc` to avoid
+ * copying.
+ *
+ * Return `RAWRTC_CODE_INVALID_STATE` in case the transport is closed.
+ * In case the buffer could not be sent due to the raw socket's buffer
+ * being too full, `RAWRTC_CODE_TRY_AGAIN_LATER` will be returned. You
+ * can safely ignore this code since SCTP will retransmit data on a
+ * reliable stream.
+ * Otherwise, `RAWRTC_CODE_SUCCESS` is being returned.
+ */
+enum rawrtc_code rawrtc_sctp_redirect_transport_feed_inbound(
+    struct rawrtc_sctp_redirect_transport* const transport,
+    struct mbuf* const buffer
+);
+
+/*
+ * Get the state of the SCTP redirect transport.
+ */
+enum rawrtc_code rawrtc_sctp_redirect_transport_get_state(
+    enum rawrtc_sctp_redirect_transport_state* const statep, // de-referenced
+    struct rawrtc_sctp_redirect_transport* const transport
+);
+
+/*
  * Get the redirected local SCTP port of the SCTP redirect transport.
  */
 enum rawrtc_code rawrtc_sctp_redirect_transport_get_port(
@@ -403,9 +455,11 @@ enum rawrtc_code rawrtc_sctp_redirect_transport_get_port(
 );
 
 /*
- * TODO:
- * rawrtc_sctp_redirect_transport_get_state
+ * Get the corresponding name for an SCTP redirect transport state.
  */
+char const * const rawrtc_sctp_redirect_transport_state_to_name(
+    enum rawrtc_sctp_redirect_transport_state const state
+);
 #endif
 
 /*
@@ -431,6 +485,9 @@ enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
 /*
  * Create an SCTP transport from an external DTLS transport.
  * `*transportp` must be unreferenced.
+ *
+ * Note: The underlying DTLS transport is supposed to be immediately
+ *       attached after creation of this transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     struct rawrtc_sctp_transport** const transportp, // de-referenced
@@ -530,7 +587,6 @@ enum rawrtc_code rawrtc_sctp_transport_set_context(
 
 /*
  * TODO (from RTCSctpTransport interface)
- * rawrtc_sctp_transport_get_transport
  * rawrtc_sctp_transport_get_state
  */
 

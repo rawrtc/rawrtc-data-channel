@@ -798,7 +798,8 @@ static void handle_association_change_event(
         case SCTP_COMM_LOST:
             // Disconnected
             // TODO: Is this the correct behaviour?
-            if (transport->state != RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
+            if (!(transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED)
+                && transport->state != RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
                 set_state(transport, RAWRTC_SCTP_TRANSPORT_STATE_CLOSED);
             }
             break;
@@ -1634,16 +1635,19 @@ static int read_event_handler(
             transport->socket, buffer->buf, buffer->size, NULL, NULL,
             &info, &info_length, &info_type, &flags);
     if (length < 0) {
-        // Meh...
-        if (errno == EAGAIN) {
-//            DEBUG_NOTICE("@ruengeler: usrsctp raised a read event but returned EAGAIN\n");
-            ignore_events = SCTP_EVENT_READ;
-            goto out;
+        switch (errno) {
+            case EAGAIN:
+#if (defined(EWOULDBLOCK) && EAGAIN != EWOULDBLOCK)
+            case EWOULDBLOCK:
+#endif
+                ignore_events = SCTP_EVENT_READ;
+                break;
+            default:
+                // Handle error
+                DEBUG_WARNING("SCTP receive failed, reason: %m\n", errno);
+                // TODO: What now? Close?
+                break;
         }
-
-        // Handle error
-        DEBUG_WARNING("SCTP receive failed, reason: %m\n", errno);
-        // TODO: What now? Close?
         goto out;
     }
 
@@ -1848,7 +1852,7 @@ enum rawrtc_code data_channels_alloc(
 static enum rawrtc_code validate_context(
         struct rawrtc_sctp_transport_context* const context // not checked
 ) {
-    // Ensure the context contains all callbacks
+    // Ensure the context contains all necessary callbacks
     if (!context->role_getter || !context->state_getter || !context->outbound_handler
         || !context->detach_handler) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -1925,7 +1929,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         return RAWRTC_CODE_INVALID_ARGUMENT;
     }
 
-    // Ensure the context contains all callbacks
+    // Ensure the context contains all necessary callbacks
     error = validate_context(context);
     if (error) {
         return error;
@@ -2719,7 +2723,8 @@ enum rawrtc_code rawrtc_sctp_transport_stop(
     }
 
     // Check state
-    if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
+    if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED
+        || transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
         return RAWRTC_CODE_SUCCESS;
     }
 

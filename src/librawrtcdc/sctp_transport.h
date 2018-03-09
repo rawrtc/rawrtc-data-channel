@@ -26,6 +26,9 @@ enum {
  */
 enum {
     RAWRTC_SCTP_TRANSPORT_FLAGS_INITIALIZED = 1 << 0,
+    // The detached flag is virtually identical to the 'closed' state but is applied before the
+    // detach handler is being called. Thus, any other functions should check for the detached flag
+    // instead of checking for the 'closed' state since that is being set at a later stage.
     RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED = 1 << 1,
     RAWRTC_SCTP_TRANSPORT_FLAGS_SENDING_IN_PROGRESS = 1 << 2,
     RAWRTC_SCTP_TRANSPORT_FLAGS_BUFFERED_AMOUNT_LOW = 1 << 3,
