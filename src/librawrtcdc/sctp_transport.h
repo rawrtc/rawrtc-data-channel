@@ -11,6 +11,7 @@
 #define RAWRTC_SCTP_EVENT_ALL (SCTP_EVENT_READ | SCTP_EVENT_WRITE | SCTP_EVENT_ERROR)
 
 enum {
+    RAWRTC_SCTP_TRANSPORT_MAX_MESSAGE_SIZE = 0,
     RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT = 10,
     RAWRTC_SCTP_TRANSPORT_DEFAULT_PORT = 5000,
     // As specified by https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13#section-5

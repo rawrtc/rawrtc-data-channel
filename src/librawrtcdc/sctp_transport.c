@@ -3227,6 +3227,15 @@ enum rawrtc_code rawrtc_sctp_transport_get_n_streams(
     return RAWRTC_CODE_SUCCESS;
 }
 
+/*
+ * Get the local SCTP transport capabilities (static).
+ * `*capabilitiesp` must be unreferenced.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
+        struct rawrtc_sctp_capabilities** const capabilitiesp // de-referenced
+) {
+    return rawrtc_sctp_capabilities_create(capabilitiesp, RAWRTC_SCTP_TRANSPORT_MAX_MESSAGE_SIZE);
+}
 
 /*
  * Get the corresponding name for an SCTP transport state.
