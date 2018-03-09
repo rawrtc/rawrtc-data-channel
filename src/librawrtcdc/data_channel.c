@@ -254,6 +254,75 @@ enum rawrtc_code rawrtc_data_channel_close(
 }
 
 /*
+ * Get the current state of the data channel.
+ */
+enum rawrtc_code rawrtc_data_channel_get_state(
+        enum rawrtc_data_channel_state* const statep, // de-referenced
+        struct rawrtc_data_channel* const channel
+) {
+    // Check arguments
+    if (!statep || !channel) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set state & done
+    *statep = channel->state;
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the currently buffered amount (bytes) of outgoing application
+ * data of the data channel.
+ */
+enum rawrtc_code rawrtc_data_channel_get_buffered_amount(
+        uint64_t* const buffered_amountp, // de-referenced
+        struct rawrtc_data_channel* const channel
+) {
+    // Check arguments
+    if (!buffered_amountp || !channel) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // TODO: Implement this!
+    return RAWRTC_CODE_NOT_IMPLEMENTED;
+}
+
+/*
+ * Set the data channel's buffered amount (bytes) low threshold for
+ * outgoing application data.
+ */
+enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_threshold(
+        struct rawrtc_data_channel* const channel,
+        uint64_t const buffered_amount_low_threshold
+) {
+    // Check arguments
+    if (!channel) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // TODO: Implement this!
+    (void) buffered_amount_low_threshold;
+    return RAWRTC_CODE_NOT_IMPLEMENTED;
+}
+
+/*
+ * Get the data channel's buffered amount (bytes) low threshold for
+ * outgoing application data.
+ */
+enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_threshold(
+        uint64_t* const buffered_amount_low_thresholdp, // de-referenced
+        struct rawrtc_data_channel* const channel
+) {
+    // Check arguments
+    if (!buffered_amount_low_thresholdp || !channel) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // TODO: Implement this!
+    return RAWRTC_CODE_NOT_IMPLEMENTED;
+}
+
+/*
  * Unset the handler argument and all handlers of the data channel.
  */
 enum rawrtc_code rawrtc_data_channel_unset_handlers(
