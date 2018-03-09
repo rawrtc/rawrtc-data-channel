@@ -439,7 +439,7 @@ enum rawrtc_code rawrtc_sctp_redirect_transport_feed_inbound(
 );
 
 /*
- * Get the state of the SCTP redirect transport.
+ * Get the current state of the SCTP redirect transport.
  */
 enum rawrtc_code rawrtc_sctp_redirect_transport_get_state(
     enum rawrtc_sctp_redirect_transport_state* const statep, // de-referenced
@@ -586,9 +586,12 @@ enum rawrtc_code rawrtc_sctp_transport_set_context(
 );
 
 /*
- * TODO (from RTCSctpTransport interface)
- * rawrtc_sctp_transport_get_state
+ * Get the current state of the SCTP transport.
  */
+enum rawrtc_code rawrtc_sctp_transport_get_state(
+    enum rawrtc_sctp_transport_state* const statep, // de-referenced
+    struct rawrtc_sctp_transport* const transport
+);
 
 /*
  * Get the local port of the SCTP transport.
@@ -615,9 +618,38 @@ enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
 );
 
 /*
- * TODO (from RTCSctpTransport interface)
- * rawrtc_sctp_transport_set_data_channel_handler
+ * Set the SCTP transport's data channel handler.
  */
+enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
+    struct rawrtc_sctp_transport* const transport,
+    rawrtc_data_channel_handler* const data_channel_handler // nullable
+);
+
+/*
+ * Get the SCTP transport's data channel handler.
+ * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_data_channel_handler(
+    rawrtc_data_channel_handler** const data_channel_handlerp, // de-referenced
+    struct rawrtc_sctp_transport* const transport
+);
+
+/*
+ * Set the SCTP transport's state change handler.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
+    struct rawrtc_sctp_transport* const transport,
+    rawrtc_sctp_transport_state_change_handler* const state_change_handler // nullable
+);
+
+/*
+ * Get the SCTP transport's state change handler.
+ * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_state_change_handler(
+    rawrtc_sctp_transport_state_change_handler** const state_change_handlerp, // de-referenced
+    struct rawrtc_sctp_transport* const transport
+);
 
 /*
  * Get the corresponding name for an SCTP transport state.
@@ -669,10 +701,24 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_label(
 );
 
 /*
- * TODO
- * rawrtc_data_channel_parameters_get_channel_type
- * rawrtc_data_channel_parameters_get_reliability_parameter
+ * Get the channel type from the data channel parameters.
  */
+enum rawrtc_code rawrtc_data_channel_parameters_get_channel_type(
+    enum rawrtc_data_channel_type* const channel_typep, // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters
+);
+
+/*
+ * Get the reliability parameter from the data channel parameters.
+ *
+ * Return `RAWRTC_CODE_NO_VALUE` in case the channel type is
+ * `RAWRTC_DATA_CHANNEL_TYPE_RELIABLE_*`. Otherwise,
+ * `RAWRTC_CODE_SUCCESS` will be returned.
+ */
+enum rawrtc_code rawrtc_data_channel_parameters_get_reliability_parameter(
+    uint32_t* const reliability_parameterp, // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters
+);
 
 /*
  * Get the protocol from the data channel parameters.
@@ -689,10 +735,23 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_protocol(
 );
 
 /*
- * TODO
- * rawrtc_data_channel_parameters_get_negotiated
- * rawrtc_data_channel_parameters_get_id
+ * Get the 'negotiated' flag from the data channel parameters.
  */
+enum rawrtc_code rawrtc_data_channel_parameters_get_negotiated(
+    bool* const negotiatedp, // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters
+);
+
+/*
+ * Get the negotiated id from the data channel parameters.
+ *
+ * Return `RAWRTC_CODE_NO_VALUE` in case the 'negotiated' flag is set
+ * `false`. Otherwise, `RAWRTC_CODE_SUCCESS` will be returned.
+ */
+enum rawrtc_code rawrtc_data_channel_parameters_get_id(
+    uint16_t* const idp, // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters
+);
 
 /*
  * Create a data channel.
@@ -741,13 +800,39 @@ enum rawrtc_code rawrtc_data_channel_close(
 );
 
 /*
- * TODO (from RTCDataChannel interface)
- * rawrtc_data_channel_get_transport
- * rawrtc_data_channel_get_ready_state
- * rawrtc_data_channel_get_buffered_amount
- * rawrtc_data_channel_get_buffered_amount_low_threshold
- * rawrtc_data_channel_set_buffered_amount_low_threshold
+ * Get the current state of the data channel.
  */
+enum rawrtc_code rawrtc_data_channel_get_state(
+    enum rawrtc_data_channel_state* const statep, // de-referenced
+    struct rawrtc_data_channel* const channel
+);
+
+/*
+ * Get the currently buffered amount (bytes) of outgoing application
+ * data of the data channel.
+ */
+enum rawrtc_code rawrtc_data_channel_get_buffered_amount(
+    uint64_t* const buffered_amountp, // de-referenced
+    struct rawrtc_data_channel* const channel
+);
+
+/*
+ * Set the data channel's buffered amount (bytes) low threshold for
+ * outgoing application data.
+ */
+enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_threshold(
+    struct rawrtc_data_channel* const channel,
+    uint64_t const buffered_amount_low_threshold
+);
+
+/*
+ * Get the data channel's buffered amount (bytes) low threshold for
+ * outgoing application data.
+ */
+enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_threshold(
+    uint64_t* const buffered_amount_low_thresholdp, // de-referenced
+    struct rawrtc_data_channel* const channel
+);
 
 /*
  * Unset the handler argument and all handlers of the data channel.
