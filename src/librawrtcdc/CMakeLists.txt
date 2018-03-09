@@ -2,7 +2,6 @@
 set(rawrtcdc_SOURCES
         crc32c.c
         data_channel.c
-        data_channel_options.c
         data_channel_parameters.c
         data_transport.c
         main.c
@@ -13,7 +12,6 @@ set(rawrtcdc_SOURCES
 set(rawrtcdc_HEADERS
         crc32c.h
         data_channel.h
-        data_channel_options.h
         data_channel_parameters.h
         data_transport.h
         main.h
