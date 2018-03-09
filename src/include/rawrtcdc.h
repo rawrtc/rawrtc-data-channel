@@ -419,6 +419,9 @@ enum rawrtc_code rawrtc_sctp_capabilities_create(
 
 /*
  * Get the SCTP parameter's maximum message size value.
+ *
+ * Note: A value of `0` indicates that the implementation supports
+ *       receiving messages of arbitrary size.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
     uint64_t* const max_message_sizep, // de-referenced

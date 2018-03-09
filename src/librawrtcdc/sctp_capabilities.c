@@ -2,13 +2,6 @@
 #include "sctp_capabilities.h"
 
 /*
- * Local SCTP capabilities.
- */
-static struct rawrtc_sctp_capabilities const sctp_capabilities = {
-    .max_message_size = RAWRTC_SCTP_CAPABILITIES_MAX_MESSAGE_SIZE
-};
-
-/*
  * Print debug information for SCTP capabilities.
  */
 int rawrtc_sctp_capabilities_debug(
@@ -62,6 +55,9 @@ enum rawrtc_code rawrtc_sctp_capabilities_create(
 
 /*
  * Get the SCTP parameter's maximum message size value.
+ *
+ * Note: A value of `0` indicates that the implementation supports
+ *       receiving messages of arbitrary size.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
         uint64_t* const max_message_sizep, // de-referenced
@@ -75,14 +71,4 @@ enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
     // Set value
     *max_message_sizep = capabilities->max_message_size;
     return RAWRTC_CODE_SUCCESS;
-}
-
-/*
- * Get the local SCTP transport capabilities (static).
- * `*capabilitiesp` must be unreferenced.
- */
-enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
-        struct rawrtc_sctp_capabilities** const capabilitiesp // de-referenced
-) {
-    return rawrtc_sctp_capabilities_create(capabilitiesp, sctp_capabilities.max_message_size);
 }
