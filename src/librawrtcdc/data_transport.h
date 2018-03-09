@@ -26,12 +26,22 @@ typedef enum rawrtc_code (rawrtc_data_transport_channel_send_handler)(
     bool const is_binary
 );
 
+/*
+ * Check if the data transport allows changing the delivery mode
+ * (transport handler).
+ */
+typedef enum rawrtc_code (rawrtc_data_transport_channel_set_streaming_handler)(
+    struct rawrtc_data_channel* const channel,
+    bool const on
+);
+
 struct rawrtc_data_transport {
     enum rawrtc_data_transport_type type;
     void* transport;
     rawrtc_data_transport_channel_create_handler* channel_create;
     rawrtc_data_transport_channel_close_handler* channel_close;
     rawrtc_data_transport_channel_send_handler* channel_send;
+    rawrtc_data_transport_channel_set_streaming_handler* channel_set_streaming;
 };
 
 void rawrtc_data_channel_set_state(
@@ -45,14 +55,14 @@ enum rawrtc_code rawrtc_data_transport_create(
     void* const internal_transport, // referenced
     rawrtc_data_transport_channel_create_handler* const channel_create_handler,
     rawrtc_data_transport_channel_close_handler* const channel_close_handler,
-    rawrtc_data_transport_channel_send_handler* const channel_send_handler
+    rawrtc_data_transport_channel_send_handler* const channel_send_handler,
+    rawrtc_data_transport_channel_set_streaming_handler* const channel_set_streaming_handler
 );
 
 enum rawrtc_code rawrtc_data_channel_create_internal(
     struct rawrtc_data_channel** const channelp, // de-referenced
     struct rawrtc_data_transport* const transport, // referenced
     struct rawrtc_data_channel_parameters* const parameters, // referenced
-    struct rawrtc_data_channel_options* options, // nullable, referenced
     rawrtc_data_channel_open_handler* const open_handler, // nullable
     rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler, // nullable
     rawrtc_data_channel_error_handler* const error_handler, // nullable

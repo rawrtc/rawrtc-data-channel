@@ -8,7 +8,6 @@
 #include "crc32c.h"
 #include "main.h"
 #include "data_transport.h"
-#include "data_channel_options.h"
 #include "data_channel_parameters.h"
 #include "data_channel.h"
 #include "sctp_capabilities.h"
@@ -841,6 +840,9 @@ static void handle_partial_delivery_event(
     channel = transport->channels[sid];
     context = channel->transport_arg;
 
+    // Clear pending incoming message flag
+    context->flags &= ~RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE;
+
     // Abort pending message
     if (context->buffer_inbound) {
         DEBUG_NOTICE("Abort partially delivered message of %zu bytes\n",
@@ -848,13 +850,13 @@ static void handle_partial_delivery_event(
         context->buffer_inbound = mem_deref(context->buffer_inbound);
 
         // Sanity-check
-        if (channel->options->deliver_partially) {
+        if (channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED) {
             DEBUG_WARNING("We deliver partially but there was a buffered message?!\n");
         }
     }
 
     // Pass abort notification to handler
-    if (channel->options->deliver_partially) {
+    if (channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED) {
         enum rawrtc_data_channel_message_flag const message_flags =
                 RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_ABORTED;
         if (channel->message_handler) {
@@ -936,7 +938,7 @@ static void handle_sender_dry_event(
                 // Reset pending outgoing stream
                 // TODO: This should probably be handled earlier but requires having separate
                 //       lists for each data channel to be sure that the stream is not reset before
-                //       all pending messages have been sent.
+                //       all pending outgoing messages of that channel have been sent.
                 reset_outgoing_stream(transport, channel);
                 context->flags &= ~RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_STREAM_RESET;
             } else {
@@ -1000,6 +1002,9 @@ static void handle_stream_reset_event(
 
         // Incoming stream reset
         if (event->strreset_flags & SCTP_STREAM_RESET_INCOMING_SSN) {
+            // Note: Assuming that we can be sure that all pending incoming messages have been
+            //       received at that point.
+
             // Set flag
             channel->flags |= RAWRTC_SCTP_DATA_CHANNEL_FLAGS_INCOMING_STREAM_RESET;
 
@@ -1246,7 +1251,7 @@ static void handle_data_channel_open_message(
 
     // Create data channel
     error = rawrtc_data_channel_create_internal(
-            &channel, data_transport, parameters, NULL,
+            &channel, data_transport, parameters,
             NULL, NULL, NULL, NULL, NULL, NULL,
             false);
     if (error) {
@@ -1403,8 +1408,8 @@ static void handle_application_message(
     if (info->rcv_ppid == RAWRTC_SCTP_TRANSPORT_PPID_UTF16_EMPTY ||
             info->rcv_ppid == RAWRTC_SCTP_TRANSPORT_PPID_BINARY_EMPTY) {
         // Incomplete empty message?
-        if (flags & SCTP_EOR) {
-            DEBUG_WARNING("Empty but incomplete message, WTF are you doing?\n");
+        if (!(flags & MSG_EOR)) {
+            DEBUG_WARNING("Empty but incomplete message\n");
             error = RAWRTC_CODE_INVALID_MESSAGE;
             goto out;
         }
@@ -1416,9 +1421,10 @@ static void handle_application_message(
         mbuf_skip_to_end(context->buffer_inbound);
 
         // Empty message is complete
+        context->flags &= ~RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE;
         message_flags |= RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_COMPLETE;
 
-    } else if (!channel->options->deliver_partially) {
+    } else if (!(channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED)) {
         // Buffer message (if needed) and get complete message (if any)
         error = buffer_message_received_raise_complete(
                 &context->buffer_inbound, &context->info_inbound,
@@ -1428,6 +1434,7 @@ static void handle_application_message(
                 break;
             case RAWRTC_CODE_NO_VALUE:
                 // Message buffered, early return here
+                context->flags |= RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE;
                 return;
             default:
                 DEBUG_WARNING("Could not buffer/complete application message, reason: %s\n",
@@ -1440,6 +1447,7 @@ static void handle_application_message(
         info = &context->info_inbound;
 
         // Message is complete
+        context->flags &= ~RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE;
         message_flags |= RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_COMPLETE;
     } else {
         // Partial delivery on, pass buffer directly
@@ -1447,7 +1455,10 @@ static void handle_application_message(
 
         // Complete?
         if (flags & MSG_EOR) {
+            context->flags &= ~RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE;
             message_flags |= RAWRTC_DATA_CHANNEL_MESSAGE_FLAG_IS_COMPLETE;
+        } else {
+            context->flags |= RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE;
         }
     }
 
@@ -1488,6 +1499,8 @@ out:
                       rawrtc_code_to_str(error));
 
         // TODO: Reset stream with SID
+        // Note: Correct behaviour of pending inbound message flag depends on closing the
+        //       channel on error here!
     }
 
     // Un-reference
@@ -1605,7 +1618,6 @@ static int read_event_handler(
     }
 
     // TODO: Get next message size
-    // TODO: Can we get the COMPLETE message size or just the current message size?
 
     // Create buffer
     buffer = mbuf_alloc(rawrtcdc_global.usrsctp_chunk_size);
@@ -2000,6 +2012,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
 
     // Set fields/reference
     transport->context = *context;
+    transport->flags = 0;
     transport->state = RAWRTC_SCTP_TRANSPORT_STATE_NEW; // TODO: Raise state (delayed)?
     transport->port = port;
     transport->data_channel_handler = data_channel_handler;
@@ -2563,6 +2576,33 @@ out:
 }
 
 /*
+ * Check if we can enable or disable streaming.
+ */
+static enum rawrtc_code channel_set_streaming_handler(
+        struct rawrtc_data_channel* const channel,
+        bool const on
+) {
+    struct rawrtc_sctp_data_channel_context* context;
+    (void) on;
+
+    // Check arguments
+    if (!channel) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Get context
+    context = channel->transport_arg;
+
+    // Check if there's a pending incoming message
+    if (context->flags & RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE) {
+        return RAWRTC_CODE_STILL_IN_USE;
+    }
+
+    // Ok, streaming mode can be activated
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
  * Get the SCTP data transport instance.
  * `*transportp` must be unreferenced.
  */
@@ -2586,7 +2626,8 @@ enum rawrtc_code rawrtc_sctp_transport_get_data_transport(
     // Create data transport
     error = rawrtc_data_transport_create(
             &transport, RAWRTC_DATA_TRANSPORT_TYPE_SCTP, sctp_transport,
-            channel_create_handler, channel_close_handler, channel_send_handler);
+            channel_create_handler, channel_close_handler, channel_send_handler,
+            channel_set_streaming_handler);
     if (error) {
         return error;
     }

@@ -145,11 +145,6 @@ struct rawrtc_data_transport;
 struct rawrtc_data_channel_parameters;
 
 /*
- * Data channel options.
- */
-struct rawrtc_data_channel_options;
-
-/*
  * SCTP capabilities.
  */
 struct rawrtc_sctp_capabilities;
@@ -297,9 +292,10 @@ typedef void (rawrtc_data_channel_message_handler)(
 /*
  * Data channel handler.
  *
- * You should call `rawrtc_data_channel_set_options` in this handler
- * before doing anything else if you want to change behaviour of the
- * data channel.
+ * Note: You should call `rawrtc_data_channel_set_streaming`
+ *       in this handler before doing anything else if you want to
+ *       enable streamed delivery of data for this channel from the
+ *       beginning of the first incoming message.
  */
 typedef void (rawrtc_data_channel_handler)(
     struct rawrtc_data_channel* const data_channel, // read-only, MUST be referenced when used
@@ -640,30 +636,18 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_protocol(
  */
 
 /*
- * Create data channel options.
- *
- * `*optionsp` must be unreferenced.
- *
- * If `deliver_partially` is set to `true`, you will receive partial
- * messages. If set to `false`, messages will be reassembled before
- * delivery. If enabled, message chunks will be delivered until the
- * message is complete. Other messages' chunks WILL NOT be interleaved
- * on the same channel.
- */
-enum rawrtc_code rawrtc_data_channel_options_create(
-    struct rawrtc_data_channel_options** const optionsp, // de-referenced
-    bool const deliver_partially
-);
-
-/*
  * Create a data channel.
  * `*channelp` must be unreferenced.
+ *
+ * Note: You should call `rawrtc_data_channel_set_streaming`
+ *       directly after this function returned if you want to enable
+ *       streamed delivery of data for this channel from the beginning
+ *       of the first incoming message.
  */
 enum rawrtc_code rawrtc_data_channel_create(
     struct rawrtc_data_channel** const channelp, // de-referenced
     struct rawrtc_data_transport* const transport, // referenced
     struct rawrtc_data_channel_parameters* const parameters, // referenced
-    struct rawrtc_data_channel_options* const options, // nullable, referenced
     rawrtc_data_channel_open_handler* const open_handler, // nullable
     rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler, // nullable
     rawrtc_data_channel_error_handler* const error_handler, // nullable
@@ -679,19 +663,6 @@ enum rawrtc_code rawrtc_data_channel_create(
 enum rawrtc_code rawrtc_data_channel_set_arg(
     struct rawrtc_data_channel* const channel,
     void* const arg // nullable
-);
-
-/*
- * Set options on a data channel.
- *
- * Note: This function must be called directly after creation of the
- * data channel (either by explicitly creating it or implicitly in form
- * of the data channel handler callback) and before calling any other
- * data channel function.
- */
-enum rawrtc_code rawrtc_data_channel_set_options(
-    struct rawrtc_data_channel* const channel,
-    struct rawrtc_data_channel_options* options // nullable, referenced
 );
 
 /*
@@ -733,6 +704,18 @@ enum rawrtc_code rawrtc_data_channel_unset_handlers(
 enum rawrtc_code rawrtc_data_channel_get_parameters(
     struct rawrtc_data_channel_parameters** const parametersp, // de-referenced
     struct rawrtc_data_channel* const channel
+);
+
+/*
+ * Enable or disable streamed delivery.
+ *
+ * Note: In case an incoming message is currently pending (there are
+ *       queued chunks in the internal reassembly buffer), this will
+ *       fail with an *invalid state* error.
+ */
+enum rawrtc_code rawrtc_data_channel_set_streaming(
+    struct rawrtc_data_channel* const channel,
+    bool const on
 );
 
 /*

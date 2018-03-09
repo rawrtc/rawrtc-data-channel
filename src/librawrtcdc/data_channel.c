@@ -1,6 +1,5 @@
 #include <rawrtcdc.h>
 #include "data_transport.h"
-#include "data_channel_options.h"
 #include "data_channel.h"
 
 #define DEBUG_MODULE "data-channel"
@@ -68,11 +67,6 @@ static void rawrtc_data_channel_destroy(
     mem_deref(channel->transport);
     mem_deref(channel->transport_arg);
     mem_deref(channel->parameters);
-
-    // Un-reference options
-    if (channel->options != &rawrtc_default_data_channel_options) {
-        mem_deref(channel->options);
-    }
 }
 
 /*
@@ -82,7 +76,6 @@ enum rawrtc_code rawrtc_data_channel_create_internal(
         struct rawrtc_data_channel** const channelp, // de-referenced
         struct rawrtc_data_transport* const transport, // referenced
         struct rawrtc_data_channel_parameters* const parameters, // referenced
-        struct rawrtc_data_channel_options* options, // nullable, referenced
         rawrtc_data_channel_open_handler* const open_handler, // nullable
         rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler, // nullable
         rawrtc_data_channel_error_handler* const error_handler, // nullable
@@ -106,7 +99,7 @@ enum rawrtc_code rawrtc_data_channel_create_internal(
     }
 
     // Set fields/reference
-    channel->flags = RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS;
+    channel->flags = 0;
     channel->state = RAWRTC_DATA_CHANNEL_STATE_CONNECTING;
     channel->transport = mem_ref(transport);
     channel->parameters = mem_ref(parameters);
@@ -116,12 +109,6 @@ enum rawrtc_code rawrtc_data_channel_create_internal(
     channel->close_handler = close_handler;
     channel->message_handler = message_handler;
     channel->arg = arg;
-
-    // Set options
-    error = rawrtc_data_channel_set_options(channel, options);
-    if (error) {
-        goto out;
-    }
 
     // Create data channel on transport
     if (call_handler) {
@@ -164,20 +151,21 @@ void rawrtc_data_channel_call_channel_handler(
     if (channel_handler) {
         channel_handler(channel, arg);
     }
-
-    // Clear options flag
-    channel->flags &= ~RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS;
 }
 
 /*
  * Create a data channel.
  * `*channelp` must be unreferenced.
+ *
+ * Note: You should call `rawrtc_data_channel_set_streaming`
+ *       directly after this function returned if you want to enable
+ *       streamed delivery of data for this channel from the beginning
+ *       of the first incoming message.
  */
 enum rawrtc_code rawrtc_data_channel_create(
         struct rawrtc_data_channel** const channelp, // de-referenced
         struct rawrtc_data_transport* const transport, // referenced
         struct rawrtc_data_channel_parameters* const parameters, // referenced
-        struct rawrtc_data_channel_options* const options, // nullable, referenced
         rawrtc_data_channel_open_handler* const open_handler, // nullable
         rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler, // nullable
         rawrtc_data_channel_error_handler* const error_handler, // nullable
@@ -186,15 +174,10 @@ enum rawrtc_code rawrtc_data_channel_create(
         void* const arg // nullable
 ) {
     enum rawrtc_code const error = rawrtc_data_channel_create_internal(
-            channelp, transport, parameters, options,
+            channelp, transport, parameters,
             open_handler, buffered_amount_low_handler,
             error_handler, close_handler, message_handler,
             arg, true);
-
-    // Clear options flag
-    if (!error) {
-        (*channelp)->flags &= ~RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS;
-    }
 
     // Done
     return error;
@@ -219,44 +202,6 @@ enum rawrtc_code rawrtc_data_channel_set_arg(
 }
 
 /*
- * Set options on a data channel.
- *
- * Note: This function must be called directly after creation of the
- * data channel (either by explicitly creating it or implicitly in form
- * of the data channel handler callback) and before calling any other
- * data channel function.
- */
-enum rawrtc_code rawrtc_data_channel_set_options(
-        struct rawrtc_data_channel* const channel,
-        struct rawrtc_data_channel_options* options // nullable, referenced
-) {
-    // Check arguments
-    if (!channel) {
-        return RAWRTC_CODE_INVALID_ARGUMENT;
-    }
-
-    // Check state
-    if (!(channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS)) {
-        return RAWRTC_CODE_INVALID_STATE;
-    }
-
-    // Use default options
-    if (!options) {
-        options = &rawrtc_default_data_channel_options;
-    }
-
-    // Set options
-    if (options == &rawrtc_default_data_channel_options) {
-        channel->options = options;
-    } else {
-        channel->options = mem_ref(options);
-    }
-
-    // Done
-    return RAWRTC_CODE_SUCCESS;
-}
-
-/*
  * Send data via the data channel.
  */
 enum rawrtc_code rawrtc_data_channel_send(
@@ -274,9 +219,6 @@ enum rawrtc_code rawrtc_data_channel_send(
     if (channel->state != RAWRTC_DATA_CHANNEL_STATE_OPEN) {
         return RAWRTC_CODE_INVALID_STATE;
     }
-
-    // Clear options flag
-    channel->flags &= ~RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS;
 
     // Call handler
     return channel->transport->channel_send(channel, buffer, is_binary);
@@ -304,9 +246,6 @@ enum rawrtc_code rawrtc_data_channel_close(
             || channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSED) {
         return RAWRTC_CODE_SUCCESS;
     }
-
-    // Clear options flag
-    channel->flags &= ~RAWRTC_DATA_CHANNEL_FLAGS_CAN_SET_OPTIONS;
 
     // Close channel
     DEBUG_PRINTF("Closing data channel: %s\n", channel->parameters->label);
@@ -353,6 +292,51 @@ enum rawrtc_code rawrtc_data_channel_get_parameters(
 
     // Set pointer & done
     *parametersp = mem_ref(channel->parameters);
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Enable or disable streamed delivery.
+ *
+ * Note: In case an incoming message is currently pending (there are
+ *       queued chunks in the internal reassembly buffer), this will
+ *       fail with a *still in use* error.
+ */
+enum rawrtc_code rawrtc_data_channel_set_streaming(
+        struct rawrtc_data_channel* const channel,
+        bool const on
+) {
+    enum rawrtc_code error;
+
+    // Check arguments
+    if (!channel) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Check state
+    if (channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSING
+        || channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSED) {
+        return RAWRTC_CODE_INVALID_STATE;
+    }
+
+    // Does anything change?
+    if ((on && channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED)
+        || (!on && !(channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED))) {
+        return RAWRTC_CODE_SUCCESS;
+    }
+
+    // Let the transport know we want to enable/disable streaming
+    error = channel->transport->channel_set_streaming(channel, on);
+    if (error) {
+        return error;
+    }
+
+    // Enable/disable streaming & done
+    if (on) {
+        channel->flags |= RAWRTC_DATA_CHANNEL_FLAGS_STREAMED;
+    } else {
+        channel->flags &= ~RAWRTC_DATA_CHANNEL_FLAGS_STREAMED;
+    }
     return RAWRTC_CODE_SUCCESS;
 }
 

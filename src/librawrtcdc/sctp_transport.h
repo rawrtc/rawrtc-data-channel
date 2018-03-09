@@ -35,9 +35,10 @@ enum {
  */
 enum {
     RAWRTC_SCTP_DATA_CHANNEL_FLAGS_CAN_SEND_UNORDERED = 1 << 0,
-    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_STREAM_RESET = 1 << 1,
-    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_INCOMING_STREAM_RESET = 1 << 2,
-    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_OUTGOING_STREAM_RESET = 1 << 3
+    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_INBOUND_MESSAGE = 1 << 1,
+    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_PENDING_STREAM_RESET = 1 << 2,
+    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_INCOMING_STREAM_RESET = 1 << 3,
+    RAWRTC_SCTP_DATA_CHANNEL_FLAGS_OUTGOING_STREAM_RESET = 1 << 4,
 };
 
 /*
@@ -81,6 +82,7 @@ enum {
 
 struct rawrtc_sctp_transport {
     struct rawrtc_sctp_transport_context context;
+    uint_fast8_t flags;
     enum rawrtc_sctp_transport_state state;
     uint16_t port;
     struct sockaddr_conn remote_address;
@@ -96,7 +98,6 @@ struct rawrtc_sctp_transport {
     uint_fast16_t current_channel_sid;
     FILE* trace_handle;
     struct socket* socket;
-    uint_fast8_t flags;
 };
 
 struct rawrtc_sctp_data_channel_context {

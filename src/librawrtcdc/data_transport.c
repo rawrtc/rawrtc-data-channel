@@ -26,7 +26,8 @@ enum rawrtc_code rawrtc_data_transport_create(
         void* const internal_transport, // referenced
         rawrtc_data_transport_channel_create_handler* const channel_create_handler,
         rawrtc_data_transport_channel_close_handler* const channel_close_handler,
-        rawrtc_data_transport_channel_send_handler* const channel_send_handler
+        rawrtc_data_transport_channel_send_handler* const channel_send_handler,
+        rawrtc_data_transport_channel_set_streaming_handler* const channel_set_streaming_handler
 ) {
     struct rawrtc_data_transport* transport;
 
@@ -47,6 +48,7 @@ enum rawrtc_code rawrtc_data_transport_create(
     transport->channel_create = channel_create_handler;
     transport->channel_close = channel_close_handler;
     transport->channel_send = channel_send_handler;
+    transport->channel_set_streaming = channel_set_streaming_handler;
 
     // Set pointer & done
     DEBUG_PRINTF("Created data transport of type %s\n", rawrtc_data_transport_type_to_str(type));
