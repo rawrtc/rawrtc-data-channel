@@ -1,5 +1,6 @@
 #include <rawrtcdc.h>
 #include "data_transport.h"
+#include "data_channel_parameters.h"
 #include "data_channel.h"
 
 #define DEBUG_MODULE "data-channel"
@@ -334,8 +335,10 @@ enum rawrtc_code rawrtc_data_channel_set_streaming(
     // Enable/disable streaming & done
     if (on) {
         channel->flags |= RAWRTC_DATA_CHANNEL_FLAGS_STREAMED;
+        DEBUG_PRINTF("Enabled streaming mode\n");
     } else {
         channel->flags &= ~RAWRTC_DATA_CHANNEL_FLAGS_STREAMED;
+        DEBUG_PRINTF("Disabled streaming mode\n");
     }
     return RAWRTC_CODE_SUCCESS;
 }
