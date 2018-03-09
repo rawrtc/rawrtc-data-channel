@@ -20,9 +20,10 @@ set(rawrtcdc_HEADERS
 
 # Optional: SCTP redirect transport tool sources
 if (SCTP_REDIRECT_TRANSPORT)
-    # Add the relevant source files
     list(APPEND rawrtcdc_SOURCES
             sctp_redirect_transport.c)
+    list(APPEND rawrtcdc_HEADERS
+            sctp_redirect_transport.h)
 endif ()
 
 # Setup library (link & install)
