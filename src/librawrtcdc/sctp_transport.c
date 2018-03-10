@@ -1614,7 +1614,7 @@ static int read_event_handler(
 
     // Detached?
     if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
-        DEBUG_NOTICE("Ignoring read event, transport is detached\n");
+        DEBUG_PRINTF("Ignoring read event, transport is detached\n");
         return RAWRTC_SCTP_EVENT_ALL;
     }
 
@@ -1691,7 +1691,7 @@ static int write_event_handler(
 ) {
     // Detached?
     if (transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED) {
-        DEBUG_NOTICE("Ignoring write event, transport is detached\n");
+        DEBUG_PRINTF("Ignoring write event, transport is detached\n");
         return RAWRTC_SCTP_EVENT_ALL;
     }
 
@@ -1734,7 +1734,7 @@ static bool error_event_handler(
 
     // Closed?
     if (transport->state == RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
-        DEBUG_NOTICE("Ignoring error event, transport is closed\n");
+        DEBUG_PRINTF("Ignoring error event, transport is closed\n");
         return RAWRTC_SCTP_EVENT_ALL;
     }
 
