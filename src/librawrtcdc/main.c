@@ -15,7 +15,7 @@ struct rawrtcdc_global rawrtcdc_global;
  */
 enum rawrtc_code rawrtcdc_init(
         bool const init_re,
-        rawrtcdc_timer_handler* const timer_handler
+        rawrtcdc_timer_handler const timer_handler
 ) {
     // Check arguments
     if (!timer_handler) {

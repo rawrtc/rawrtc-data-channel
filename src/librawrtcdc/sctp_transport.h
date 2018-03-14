@@ -91,8 +91,8 @@ struct rawrtc_sctp_transport {
     uint16_t port;
     struct sockaddr_conn remote_address;
     uint64_t remote_maximum_message_size;
-    rawrtc_data_channel_handler* data_channel_handler; // nullable
-    rawrtc_sctp_transport_state_change_handler* state_change_handler; // nullable
+    rawrtc_data_channel_handler data_channel_handler; // nullable
+    rawrtc_sctp_transport_state_change_handler state_change_handler; // nullable
     void* arg; // nullable
     struct list buffered_messages_outgoing;
     struct mbuf* buffer_dcep_inbound;
