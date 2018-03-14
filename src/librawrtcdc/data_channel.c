@@ -77,11 +77,11 @@ enum rawrtc_code rawrtc_data_channel_create_internal(
         struct rawrtc_data_channel** const channelp, // de-referenced
         struct rawrtc_data_transport* const transport, // referenced
         struct rawrtc_data_channel_parameters* const parameters, // referenced
-        rawrtc_data_channel_open_handler* const open_handler, // nullable
-        rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler, // nullable
-        rawrtc_data_channel_error_handler* const error_handler, // nullable
-        rawrtc_data_channel_close_handler* const close_handler, // nullable
-        rawrtc_data_channel_message_handler* const message_handler, // nullable
+        rawrtc_data_channel_open_handler const open_handler, // nullable
+        rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler, // nullable
+        rawrtc_data_channel_error_handler const error_handler, // nullable
+        rawrtc_data_channel_close_handler const close_handler, // nullable
+        rawrtc_data_channel_message_handler const message_handler, // nullable
         void* const arg, // nullable
         bool const call_handler
 ) {
@@ -145,7 +145,7 @@ out:
  */
 void rawrtc_data_channel_call_channel_handler(
         struct rawrtc_data_channel* const channel, // not checked
-        rawrtc_data_channel_handler* const channel_handler, // nullable
+        rawrtc_data_channel_handler const channel_handler, // nullable
         void* const arg
 ) {
     // Call handler (if any)
@@ -167,11 +167,11 @@ enum rawrtc_code rawrtc_data_channel_create(
         struct rawrtc_data_channel** const channelp, // de-referenced
         struct rawrtc_data_transport* const transport, // referenced
         struct rawrtc_data_channel_parameters* const parameters, // referenced
-        rawrtc_data_channel_open_handler* const open_handler, // nullable
-        rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler, // nullable
-        rawrtc_data_channel_error_handler* const error_handler, // nullable
-        rawrtc_data_channel_close_handler* const close_handler, // nullable
-        rawrtc_data_channel_message_handler* const message_handler, // nullable
+        rawrtc_data_channel_open_handler const open_handler, // nullable
+        rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler, // nullable
+        rawrtc_data_channel_error_handler const error_handler, // nullable
+        rawrtc_data_channel_close_handler const close_handler, // nullable
+        rawrtc_data_channel_message_handler const message_handler, // nullable
         void* const arg // nullable
 ) {
     enum rawrtc_code const error = rawrtc_data_channel_create_internal(
@@ -417,7 +417,7 @@ enum rawrtc_code rawrtc_data_channel_set_streaming(
  */
 enum rawrtc_code rawrtc_data_channel_set_open_handler(
         struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_open_handler* const open_handler // nullable
+        rawrtc_data_channel_open_handler const open_handler // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -434,7 +434,7 @@ enum rawrtc_code rawrtc_data_channel_set_open_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_open_handler(
-        rawrtc_data_channel_open_handler** const open_handlerp, // de-referenced
+        rawrtc_data_channel_open_handler* const open_handlerp, // de-referenced
         struct rawrtc_data_channel* const channel
 ) {
     // Check arguments
@@ -456,7 +456,7 @@ enum rawrtc_code rawrtc_data_channel_get_open_handler(
  */
 enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_handler(
         struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handler // nullable
+        rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -473,7 +473,7 @@ enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_handler(
-        rawrtc_data_channel_buffered_amount_low_handler** const buffered_amount_low_handlerp, // de-referenced
+        rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handlerp, // de-referenced
         struct rawrtc_data_channel* const channel
 ) {
     // Check arguments
@@ -495,7 +495,7 @@ enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_handler(
  */
 enum rawrtc_code rawrtc_data_channel_set_error_handler(
         struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_error_handler* const error_handler // nullable
+        rawrtc_data_channel_error_handler const error_handler // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -512,7 +512,7 @@ enum rawrtc_code rawrtc_data_channel_set_error_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_error_handler(
-        rawrtc_data_channel_error_handler** const error_handlerp, // de-referenced
+        rawrtc_data_channel_error_handler* const error_handlerp, // de-referenced
         struct rawrtc_data_channel* const channel
 ) {
     // Check arguments
@@ -534,7 +534,7 @@ enum rawrtc_code rawrtc_data_channel_get_error_handler(
  */
 enum rawrtc_code rawrtc_data_channel_set_close_handler(
         struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_close_handler* const close_handler // nullable
+        rawrtc_data_channel_close_handler const close_handler // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -551,7 +551,7 @@ enum rawrtc_code rawrtc_data_channel_set_close_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_close_handler(
-        rawrtc_data_channel_close_handler** const close_handlerp, // de-referenced
+        rawrtc_data_channel_close_handler* const close_handlerp, // de-referenced
         struct rawrtc_data_channel* const channel
 ) {
     // Check arguments
@@ -573,7 +573,7 @@ enum rawrtc_code rawrtc_data_channel_get_close_handler(
  */
 enum rawrtc_code rawrtc_data_channel_set_message_handler(
         struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_message_handler* const message_handler // nullable
+        rawrtc_data_channel_message_handler const message_handler // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -590,7 +590,7 @@ enum rawrtc_code rawrtc_data_channel_set_message_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_message_handler(
-        rawrtc_data_channel_message_handler** const message_handlerp, // de-referenced
+        rawrtc_data_channel_message_handler* const message_handlerp, // de-referenced
         struct rawrtc_data_channel* const channel
 ) {
     // Check arguments

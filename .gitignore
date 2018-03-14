@@ -34,8 +34,11 @@
 # Var
 /var
 
-# Build folder
+# Build folders
 /build*
+/docs/_build
 
 # Generated files
 /src/include/rawrtcdc_internal.h
+/docs/Doxyfile
+/docs/conf.py

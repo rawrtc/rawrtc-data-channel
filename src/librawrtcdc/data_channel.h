@@ -22,10 +22,10 @@ struct rawrtc_data_channel {
     struct rawrtc_data_transport* transport; // referenced
     void* transport_arg; // referenced
     struct rawrtc_data_channel_parameters* parameters; // referenced
-    rawrtc_data_channel_open_handler* open_handler; // nullable
-    rawrtc_data_channel_buffered_amount_low_handler* buffered_amount_low_handler; // nullable
-    rawrtc_data_channel_error_handler* error_handler; // nullable
-    rawrtc_data_channel_close_handler* close_handler; // nullable
-    rawrtc_data_channel_message_handler* message_handler; // nullable
+    rawrtc_data_channel_open_handler open_handler; // nullable
+    rawrtc_data_channel_buffered_amount_low_handler buffered_amount_low_handler; // nullable
+    rawrtc_data_channel_error_handler error_handler; // nullable
+    rawrtc_data_channel_close_handler close_handler; // nullable
+    rawrtc_data_channel_message_handler message_handler; // nullable
     void* arg; // nullable
 };

@@ -463,7 +463,7 @@ static void close_data_channels(
         }
 
         // Update state
-        DEBUG_PRINTF("Closing channel with SID %"PRIu16"\n", i);
+        DEBUG_PRINTF("Closing (non-graceful) channel with SID %"PRIu16"\n", i);
         rawrtc_data_channel_set_state(channel, RAWRTC_DATA_CHANNEL_STATE_CLOSED);
 
         // Remove from transport
@@ -797,7 +797,6 @@ static void handle_association_change_event(
         case SCTP_SHUTDOWN_COMP:
         case SCTP_COMM_LOST:
             // Disconnected
-            // TODO: Is this the correct behaviour?
             if (!(transport->flags & RAWRTC_SCTP_TRANSPORT_FLAGS_DETACHED)
                 && transport->state != RAWRTC_SCTP_TRANSPORT_STATE_CLOSED) {
                 set_state(transport, RAWRTC_SCTP_TRANSPORT_STATE_CLOSED);
@@ -1909,8 +1908,8 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         struct rawrtc_sctp_transport** const transportp, // de-referenced
         struct rawrtc_sctp_transport_context* const context, // copied
         uint16_t port, // zeroable
-        rawrtc_data_channel_handler* const data_channel_handler, // nullable
-        rawrtc_sctp_transport_state_change_handler* const state_change_handler, // nullable
+        rawrtc_data_channel_handler const data_channel_handler, // nullable
+        rawrtc_sctp_transport_state_change_handler const state_change_handler, // nullable
         void* const arg // nullable
 ) {
     enum rawrtc_code error;
@@ -2475,7 +2474,7 @@ static enum rawrtc_code channel_close_handler(
     // Un-reference channel and clear pointer (if channel was registered before)
     // Note: The context will be NULL if the channel was not registered before
     if (context) {
-        DEBUG_PRINTF("Closing channel with SID %"PRIu16"\n", context->sid);
+        DEBUG_PRINTF("Closing (graceful) channel with SID %"PRIu16"\n", context->sid);
 
         // Sanity check
         if (!channel_registered(transport, channel)) {
@@ -3258,7 +3257,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
  */
 enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
         struct rawrtc_sctp_transport* const transport,
-        rawrtc_data_channel_handler* const data_channel_handler // nullable
+        rawrtc_data_channel_handler const data_channel_handler // nullable
 ) {
     // Check arguments
     if (!transport) {
@@ -3275,7 +3274,7 @@ enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_data_channel_handler(
-        rawrtc_data_channel_handler** const data_channel_handlerp, // de-referenced
+        rawrtc_data_channel_handler* const data_channel_handlerp, // de-referenced
         struct rawrtc_sctp_transport* const transport
 ) {
     // Check arguments
@@ -3297,7 +3296,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_data_channel_handler(
  */
 enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
         struct rawrtc_sctp_transport* const transport,
-        rawrtc_sctp_transport_state_change_handler* const state_change_handler // nullable
+        rawrtc_sctp_transport_state_change_handler const state_change_handler // nullable
 ) {
     // Check arguments
     if (!transport) {
@@ -3314,7 +3313,7 @@ enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_state_change_handler(
-        rawrtc_sctp_transport_state_change_handler** const state_change_handlerp, // de-referenced
+        rawrtc_sctp_transport_state_change_handler* const state_change_handlerp, // de-referenced
         struct rawrtc_sctp_transport* const transport
 ) {
     // Check arguments
