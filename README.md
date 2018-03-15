@@ -54,7 +54,7 @@ Features with a check mark are already implemented.
 6. *Does it create threads?*
 
    We have
-   [this issue](https://github.com/NEAT-project/usrsctp-neat/issues/12)) but
+   [this issue](https://github.com/NEAT-project/usrsctp-neat/issues/12) but
    hope to resolve it soon.
 
 7. *Is this a custom SCTP implementation?*
@@ -115,7 +115,7 @@ build this library:
 The library and its dependencies will be built inside the docker image and can
 be accessed there in the following way:
 
-    docker run -it rawrtc bash
+    docker run -it rawrtcdc bash
     ls -l /rawrtcdc/build/prefix
 
 ## Getting Started
@@ -246,8 +246,12 @@ enum rawrtc_code sctp_transport_outbound_handler(
 }
 ```
 
-The `struct buffer` and its functions are documented [here][re-mbuf]. Be aware
-`buffer` in this case is not dynamically allocated and shall not be referenced.
+The `struct buffer` and its functions are documented [here][re-mbuf]. As a rule
+of thumb, you should call `mbuf_buf(buffer)` to get a pointer to the current
+position and `mbuf_get_left(buffer)` to get the amount of bytes left in the
+buffer.
+Be aware `buffer` in this case is not dynamically allocated and shall not be
+referenced. This has been done for optimisation purposes.
 Check the [header file][rawrtcc.h] for further details on the various
 parameters passed to this handler function.
 
@@ -282,14 +286,21 @@ That's all for the SCTP transport.
 
 The data channel API is very similar to the one used in WebRTC and ORTC, so we
 will not go into detail for them. Here's a quick example on how to create a
-reliable and ordered data channel that's pre-negotiated to the stream id `42`:
+data channel with the following properties:
+
+* label: `meow`
+* protocol: `v1.cat-noises`
+* reliable
+* unordered
+* pre-negotiated
+* stream id is fixed to `42`
 
 ```c
 // Create data channel parameters
 struct rawrtc_data_channel_parameters parameters;
 error = rawrtc_data_channel_parameters_create(
-        &parameters, "label", RAWRTC_DATA_CHANNEL_TYPE_RELIABLE_ORDERED, 0,
-        "protocol", true, 42);
+        &parameters, "meow", RAWRTC_DATA_CHANNEL_TYPE_RELIABLE_UNORDERED, 0,
+        "v1.cat-noises", true, 42);
 
 // Create the data channel, using the transport and the parameters
 struct rawrtc_data_channel channel;
