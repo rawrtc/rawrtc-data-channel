@@ -2028,6 +2028,8 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         error = rawrtcdc_global.timer_handler(
                 true, (uint_fast16_t) RAWRTC_SCTP_TRANSPORT_TIMER_TIMEOUT);
         if (error) {
+            DEBUG_WARNING("Scheduling timer failed: %s\n", rawrtc_code_to_str(error));
+            error = RAWRTC_CODE_EXTERNAL_ERROR;
             goto out;
         }
     }
@@ -2136,6 +2138,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     }
 
     // TODO: Enable interleaving messages for different streams (outgoing)
+    //       This needs some work: https://github.com/rawrtc/rawrtc-data-channel/issues/14
     // https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-ndata-08#section-4.3.1
 //    av.assoc_id = SCTP_FUTURE_ASSOC;
 //    av.assoc_value = 1;
