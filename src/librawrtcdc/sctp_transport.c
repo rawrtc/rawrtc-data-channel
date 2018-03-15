@@ -3042,7 +3042,7 @@ enum rawrtc_code rawrtc_sctp_transport_set_mtu(
         struct rawrtc_sctp_transport* const transport,
         uint32_t mtu
 ) {
-    struct sctp_paddrparams peer_address_parameters = {0};
+    struct sctp_paddrparams peer_address_parameters = {{0}};
 
     // Check arguments
     if (!transport || !transport->socket) {
@@ -3084,7 +3084,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_mtu(
         bool* const mtu_discovery_enabledp, // de-referenced
         struct rawrtc_sctp_transport* const transport
 ) {
-    struct sctp_paddrparams peer_address_parameters = {0};
+    struct sctp_paddrparams peer_address_parameters = {{0}};
     socklen_t option_size;
 
     // Check arguments
@@ -3133,7 +3133,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_mtu(
 enum rawrtc_code rawrtc_sctp_transport_enable_mtu_discovery(
         struct rawrtc_sctp_transport* const transport
 ) {
-    struct sctp_paddrparams peer_address_parameters = {0};
+    struct sctp_paddrparams peer_address_parameters = {{0}};
 
     // Check arguments
     if (!transport) {
