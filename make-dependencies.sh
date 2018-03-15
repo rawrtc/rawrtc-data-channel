@@ -27,6 +27,9 @@ USRSCTP_GIT="https://github.com/rawrtc/usrsctp.git"
 USRSCTP_BRANCH="usrsctp-for-rawrtc"
 USRSCTP_COMMIT="eabbea6cfb4dac224e082fc021b568ec9a731c0b"
 USRSCTP_PATH="usrsctp"
+RAWRTCC_GIT="https://github.com/rawrtc/rawrtc-common.git"
+RAWRTCC_BRANCH="master"
+RAWRTCC_PATH="rawrtcc"
 
 # Prefix
 export PREFIX=${BUILD_PATH}/prefix
@@ -96,6 +99,23 @@ if [ -z "$SKIP_LIBRE" ]; then
     cd ${MAIN_DIR}
 fi
 
+# Get RAWRTCC
+if [ -z "$SKIP_RAWRTCC" ]; then
+    if [ ! -d "${RAWRTCC_PATH}" ]; then
+        echo "Cloning RAWRTCC"
+        git clone -b ${RAWRTCC_BRANCH} ${RAWRTCC_GIT} ${RAWRTCC_PATH}
+        cd ${RAWRTCC_PATH}
+    elif [ "$offline" = false ]; then
+        cd ${RAWRTCC_PATH}
+        echo "Pulling usrsctp"
+        git pull
+    else
+        cd ${RAWRTCC_PATH}
+    fi
+    git checkout ${RAWRTCC_BRANCH}
+    cd ${MAIN_DIR}
+fi
+
 # Build usrsctp
 if [ -z "$SKIP_USRSCTP" ]; then
     cd ${USRSCTP_PATH}
@@ -134,5 +154,22 @@ if [ -z "$SKIP_LIBRE" ]; then
     EXTRA_CFLAGS="-Werror${clang_extra_cflags}" \
     ${re_make} install
     rm -f ${PREFIX}/lib/libre.so ${PREFIX}/lib/libre.*dylib
+    cd ${MAIN_DIR}
+fi
+
+# Build RAWRTCC
+if [ -z "$SKIP_RAWRTCC" ]; then
+    cd ${RAWRTCC_PATH}
+    if [ ! -d "build" ]; then
+        mkdir build
+    fi
+    cd build
+    echo "Configuring RAWRTCC"
+    cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+    ..
+    echo "Cleaning RAWRTCC"
+    make clean
+    echo "Building & installing RAWRTCC"
+    make install -j${THREADS}
     cd ${MAIN_DIR}
 fi
