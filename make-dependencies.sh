@@ -19,6 +19,9 @@ if [ ! -z "$OFFLINE" ]; then
 fi
 
 # Dependencies
+OPENSSL_VERSION="1.1.0g"
+OPENSSL_URL="https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz"
+OPENSSL_PATH="openssl"
 LIBRE_GIT="https://github.com/rawrtc/re.git"
 LIBRE_BRANCH="rawrtc-patched"
 LIBRE_COMMIT="7d837903ac78bbfbc56e2efb21315665d1834f1e"
@@ -61,6 +64,41 @@ fi
 clang_extra_cflags=""
 if [ "${CC}" = "clang" ]; then
     clang_extra_cflags=" -Wno-error=unused-command-line-argument"
+fi
+
+# Check for DTLS 1.2 suppport in openssl
+echo "OpenSSL version: `pkg-config --short-errors --modversion openssl`"
+have_dtls_1_2=true
+pkg-config --atleast-version=1.0.2 openssl || have_dtls_1_2=false
+echo "OpenSSL DTLS 1.2 support: $have_dtls_1_2"
+
+# Check if we need to fetch & install openssl
+need_openssl=false
+if ([ ! -z "$ENFORCE_OPENSSL" ] && [ "${ENFORCE_OPENSSL}" = "1" ]) || [ "$have_dtls_1_2" = false ]; then
+    # Already installed? Check version
+    if [ -d "${OPENSSL_PATH}" ]; then
+        # Outdated?
+        pkg-config --atleast-version=${OPENSSL_VERSION} openssl || need_openssl=true
+    else
+        # Not downloaded
+        need_openssl=true
+    fi
+fi
+echo "Need to fetch OpenSSL: $need_openssl"
+
+# Get openssl
+if [ "$need_openssl" = true ]; then
+    if [ "$offline" = true ]; then
+        echo "Cannot fetch OpenSSL as we are offline"
+        exit 1
+    fi
+    rm -rf ${OPENSSL_PATH}
+    echo "Fetching OpenSSL"
+    which curl > /dev/null || (echo "Cannot fetch OpenSSL, curl not installed" && exit 1)
+    curl -O ${OPENSSL_URL}
+    which tar > /dev/null || (echo "Cannot unpack OpenSSL, tar not installed" && exit 1)
+    tar -xzf openssl-${OPENSSL_VERSION}.tar.gz
+    mv openssl-${OPENSSL_VERSION} ${OPENSSL_PATH}
 fi
 
 # Get usrsctp
@@ -116,6 +154,28 @@ if [ -z "$SKIP_RAWRTCC" ]; then
     cd ${MAIN_DIR}
 fi
 
+# Build openssl
+if [ "$need_openssl" = true ]; then
+    cd ${OPENSSL_PATH}
+    echo "Configuring OpenSSL"
+    ./config shared --prefix=${PREFIX}
+    echo "Building OpenSSL"
+    make
+    echo "Installing OpenSSL"
+    make install
+    cd ${MAIN_DIR}
+fi
+
+# Print openssl information
+echo "OpenSSL version: `pkg-config --short-errors --modversion openssl`"
+have_dtls_1_2=true
+pkg-config --atleast-version=1.0.2 openssl || have_dtls_1_2=false
+echo "OpenSSL DTLS 1.2 support: $have_dtls_1_2"
+
+# Set openssl sysroot
+openssl_sysroot=`pkg-config --variable=prefix openssl`
+echo "Using OpenSSL sysroot: $openssl_sysroot"
+
 # Build usrsctp
 if [ -z "$SKIP_USRSCTP" ]; then
     cd ${USRSCTP_PATH}
@@ -148,9 +208,11 @@ if [ -z "$SKIP_LIBRE" ]; then
     echo "Cleaning libre"
     ${re_make} clean
     echo "Build information for libre:"
+    SYSROOT_ALT=${openssl_sysroot} \
     EXTRA_CFLAGS="-Werror${clang_extra_cflags}" \
     ${re_make} info
     echo "Building libre"
+    SYSROOT_ALT=${openssl_sysroot} \
     EXTRA_CFLAGS="-Werror${clang_extra_cflags}" \
     ${re_make} install
     rm -f ${PREFIX}/lib/libre.so ${PREFIX}/lib/libre.*dylib
