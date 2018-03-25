@@ -227,7 +227,7 @@ if [ -z "$SKIP_RAWRTCC" ]; then
     fi
     cd build
     echo "Configuring RAWRTCC"
-    cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+    cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} -DBUILD_SHARED_LIBS=OFF \
     ..
     echo "Cleaning RAWRTCC"
     make clean

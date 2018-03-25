@@ -27,26 +27,21 @@ if (SCTP_REDIRECT_TRANSPORT)
 endif ()
 
 # Setup library (link & install)
-add_library(rawrtcdc SHARED ${rawrtcdc_SOURCES})
+add_library(rawrtcdc ${rawrtcdc_SOURCES})
 target_link_libraries(rawrtcdc
         ${rawrtcdc_DEP_LIBRARIES})
-add_library(rawrtcdc-static STATIC ${rawrtcdc_SOURCES})
-target_link_libraries(rawrtcdc-static
-        ${rawrtcdc_DEP_LIBRARIES})
-install(TARGETS rawrtcdc rawrtcdc-static
+install(TARGETS rawrtcdc
         DESTINATION lib)
 
 # Optional: SCTP redirect transport tool definitions
 if (SCTP_REDIRECT_TRANSPORT)
     # And set the preprocessor variable
     target_compile_definitions(rawrtcdc PRIVATE SCTP_REDIRECT_TRANSPORT)
-    target_compile_definitions(rawrtcdc-static PRIVATE SCTP_REDIRECT_TRANSPORT)
 endif ()
 
 # ARM: Disable hardware CRC32-C (which requires SSE 4.2)
 if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
     target_compile_definitions(rawrtcdc PRIVATE DISABLE_HW_CRC32C)
-    target_compile_definitions(rawrtcdc-static PRIVATE DISABLE_HW_CRC32C)
 endif ()
 
 # Generate internal headers & install them
