@@ -28,6 +28,8 @@ endif ()
 
 # Setup library (link & install)
 add_library(rawrtcdc ${rawrtcdc_SOURCES})
+set_property(TARGET rawrtcdc
+        PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(rawrtcdc
         ${rawrtcdc_DEP_LIBRARIES})
 install(TARGETS rawrtcdc
