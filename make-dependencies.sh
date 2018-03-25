@@ -145,7 +145,7 @@ if [ -z "$SKIP_RAWRTCC" ]; then
         cd ${RAWRTCC_PATH}
     elif [ "$offline" = false ]; then
         cd ${RAWRTCC_PATH}
-        echo "Pulling usrsctp"
+        echo "Pulling RAWRTCC"
         git pull
     else
         cd ${RAWRTCC_PATH}
