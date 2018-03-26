@@ -46,19 +46,8 @@ if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
     target_compile_definitions(rawrtcdc PRIVATE DISABLE_HW_CRC32C)
 endif ()
 
-# Generate internal headers & install them
-set(internal_header_file "${CMAKE_SOURCE_DIR}/src/include/rawrtcdc_internal.h")
-set(rawrtcdc_HEADERS_INCLUDE "")
-foreach (header IN LISTS rawrtcdc_HEADERS)
-    string(CONCAT rawrtcdc_HEADERS_INCLUDE
-            ${rawrtcdc_HEADERS_INCLUDE}
-            "#include <rawrtcdc/internal/"
-            ${header} ">\n")
-endforeach ()
-configure_file(${CMAKE_SOURCE_DIR}/src/include/rawrtcdc_internal.h.cmakein
-        ${internal_header_file} @ONLY)
+# Install internal headers
 install(FILES ${rawrtcdc_HEADERS} DESTINATION include/rawrtcdc/internal)
-install(FILES ${internal_header_file} DESTINATION include)
 
 # Generate pkg-config file & install it
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.cmakein
