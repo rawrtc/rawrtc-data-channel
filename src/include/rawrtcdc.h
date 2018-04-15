@@ -324,6 +324,7 @@ struct rawrtc_sctp_transport_context {
     rawrtc_sctp_transport_outbound_handler outbound_handler;
     rawrtc_sctp_transport_detach_handler detach_handler; // nullable
     rawrtc_sctp_transport_destroyed_handler destroyed_handler; // nullable
+    bool trace_packets;
     void* arg; // nullable
 };
 
