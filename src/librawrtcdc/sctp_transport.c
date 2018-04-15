@@ -2044,8 +2044,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
 
     // Create packet tracer
     // TODO: Debug mode only, filename set by debug options
-#ifdef SCTP_DEBUG
-    {
+    if (context->trace_packets) {
         char trace_handle_id[8];
         char* trace_handle_name;
 
@@ -2065,7 +2064,6 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
             }
         }
     }
-#endif
 
     // Create SCTP socket
     DEBUG_PRINTF("Creating SCTP socket\n");

@@ -172,6 +172,7 @@ struct rawrtc_sctp_transport_context context = {
     .outbound_handler = sctp_transport_outbound_handler,
     .detach_handler = sctp_transport_detach_handler,
     .destroyed_handler = sctp_transport_destroy,
+    .trace_packets = false,
     .arg = your_reference,
 };
 
@@ -279,6 +280,10 @@ void sctp_transport_destroy(
     // Your cleanup code here
 }
 ```
+
+The `trace_packets` attribute allows you to enable writing SCTP packets to a
+trace file. The name of that file is randomly generated and will be placed in
+the current working directory.
 
 That's all for the SCTP transport.
 
