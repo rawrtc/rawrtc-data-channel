@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:bionic
 LABEL maintainer="Lennart Grahl <lennart.grahl@gmail.com>"
 
 # Fetch RAWRTC dependencies

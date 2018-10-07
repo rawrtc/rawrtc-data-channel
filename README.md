@@ -69,7 +69,7 @@ The following packages are required:
 * [git][git]
 * [cmake][cmake] >= 3.2
 * pkg-config (`pkgconf` for newer FreeBSD versions)
-* SSL development libraries (`libssl-dev` on Debian, `openssl` on OSX and FreeBSD)
+* OpenSSL >= 1.0.2 (`libssl-dev` on Debian, `openssl` on OSX and FreeBSD)
 * GNU make (`gmake` on FreeBSD for `re` and `rew` dependencies)
 
 or
