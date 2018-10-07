@@ -1,5 +1,7 @@
 # RAWRTCDC
 
+[![CircleCI build status][circleci-badge]][circleci-url]
+[![Travis CI build status][travis-ci-badge]][travis-ci-url]
 [![Join our chat on Gitter][gitter-icon]][gitter]
 
 A standalone [WebRTC][w3c-webrtc] and [ORTC][w3c-ortc] data channel
@@ -340,6 +342,11 @@ Do you feel like this now? If yes, please join our [gitter chat][gitter], so we
 can help you and work out what's missing in this little tutorial.
 
 
+
+[circleci-badge]: https://circleci.com/gh/rawrtc/rawrtc-data-channel.svg?style=svg
+[circleci-url]: https://circleci.com/gh/rawrtc/rawrtc-data-channel
+[travis-ci-badge]: https://travis-ci.org/rawrtc/rawrtc-data-channel.svg?branch=master
+[travis-ci-url]: https://travis-ci.org/rawrtc/rawrtc-data-channel
 
 [gitter]: https://gitter.im/rawrtc/Lobby
 [gitter-icon]: https://badges.gitter.im/rawrtc/Lobby.svg
