@@ -122,9 +122,15 @@ enum rawrtc_code rawrtc_data_channel_create_internal(
     }
 
     // Done
-    DEBUG_PRINTF("Created data channel: %s, protocol: %s\n",
-                 parameters->label ? parameters->label : "n/a",
-                 parameters->protocol ? parameters->protocol : "n/a");
+    DEBUG_PRINTF(
+            "Created data channel: label=%s, type=%d, reliability-parameter=%"PRIu32", "
+            "protocol=%s, negotiated=%s, id=%"PRIu16"\n",
+            parameters->label ? parameters->label : "n/a",
+            parameters->channel_type,
+            parameters->reliability_parameter,
+            parameters->protocol ? parameters->protocol : "n/a",
+            parameters->negotiated ? "yes" : "no",
+            parameters->id);
 
 out:
     if (error) {
