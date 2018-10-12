@@ -25,7 +25,7 @@ LIBRE_COMMIT="7d837903ac78bbfbc56e2efb21315665d1834f1e"
 LIBRE_PATH="re"
 USRSCTP_GIT="https://github.com/rawrtc/usrsctp.git"
 USRSCTP_BRANCH="usrsctp-for-rawrtc"
-USRSCTP_COMMIT="005db8982a6304109aacffc70b16059bf17fee32"
+USRSCTP_COMMIT="5edfaf1b8e17faabf2b1b6e559b042a088ce6c2c"
 USRSCTP_PATH="usrsctp"
 RAWRTCC_GIT="https://github.com/rawrtc/rawrtc-common.git"
 RAWRTCC_BRANCH="master"
@@ -137,15 +137,12 @@ if [ -z "$SKIP_USRSCTP" ]; then
     fi
     cd build
     echo "Configuring usrsctp"
-    # TODO: Disable "-Wno-address-of-packed-member" once usrsctp has fixed this
-    CFLAGS="-fPIC -Wno-unknown-warning-option -Wno-address-of-packed-member" \
     # SCTP_DEBUG: We need this since this is a compile time flag in RAWRTCDC
     # THREAD_SUPPORT: We explicitly don't want any threads running
-    # SCTP_WITH_NO_CSUM: There's no need to verify the payload checksum since DTLS already does
-    #                    that.
+    CFLAGS="-fPIC" \
     cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
-    -DSCTP_DEBUG=ON \
-    -DTHREAD_SUPPORT=OFF \
+    -Dsctp_debug=ON \
+    -Dsctp_thread_support=OFF \
     ..
     echo "Cleaning usrsctp"
     make clean
