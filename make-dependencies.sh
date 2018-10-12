@@ -141,8 +141,8 @@ if [ -z "$SKIP_USRSCTP" ]; then
     # THREAD_SUPPORT: We explicitly don't want any threads running
     CFLAGS="-fPIC" \
     cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
-    -DSCTP_DEBUG=ON \
-    -DTHREAD_SUPPORT=OFF \
+    -Dsctp_debug=ON \
+    -Dsctp_thread_support=OFF \
     ..
     echo "Cleaning usrsctp"
     make clean
