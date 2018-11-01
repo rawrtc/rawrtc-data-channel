@@ -343,7 +343,7 @@ can help you and work out what's missing in this little tutorial.
 
 
 
-[circleci-badge]: https://circleci.com/gh/rawrtc/rawrtc-data-channel.svg?style=svg
+[circleci-badge]: https://circleci.com/gh/rawrtc/rawrtc-data-channel.svg?style=shield
 [circleci-url]: https://circleci.com/gh/rawrtc/rawrtc-data-channel
 [travis-ci-badge]: https://travis-ci.org/rawrtc/rawrtc-data-channel.svg?branch=master
 [travis-ci-url]: https://travis-ci.org/rawrtc/rawrtc-data-channel
