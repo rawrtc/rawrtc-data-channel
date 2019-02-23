@@ -1,101 +1,155 @@
-version: 2.0
+version: 2
 
-shared: &shared
+shared:
+  host: &shared-host
     working_directory: ~/rawrtc-data-channel
     steps:
       - checkout
 
-      # Diagnostics
+      # Configure library
       - run:
-          name: Show versions
+          name: Configure
           command: |
-            $CC -v
-            cmake --version
-            openssl version
-
-      # Build library dependencies
-      - run:
-          name: Build dependencies
-          command: ./make-dependencies.sh
-
-      # Set pkg-config path, dynamic library path and binary path (since we prefix)
-      - run:
-          name: "Setup environment variables"
-          command: |
-            echo 'export PKG_CONFIG_PATH=${PWD}/build/prefix/lib/pkgconfig:${PKG_CONFIG_PATH}' >> ${BASH_ENV}
-            echo 'export LD_LIBRARY_PATH=${PWD}/build/prefix/lib:${LD_LIBRARY_PATH}' >> ${BASH_ENV}
-            echo 'export PATH=${PWD}/build/prefix/bin:${PATH}' >> ${BASH_ENV}
+            mkdir build
+            meson build --prefix /tmp/prefix
 
       # Build library
       - run:
           name: Build
           command: |
             cd build
-            cmake \
-              -DCMAKE_INSTALL_PREFIX=${PWD}/prefix \
-              -DCMAKE_C_FLAGS="-Werror -Wall -Wno-unused-function" \
-              ..
-            make install
+            ninja install
+
+  cross: &shared-cross
+    working_directory: ~/rawrtc-data-channel
+    steps:
+      - checkout
+
+      # Configure library
+      - run:
+          name: Configure
+          command: |
+            mkdir build
+            meson build --prefix /tmp/prefix --cross-file ${CROSS_FILE_NAME}
+
+      # Build library
+      - run:
+          name: Build
+          command: |
+            cd build
+            ninja install
+
 
 jobs:
-  # Ubuntu 14.04 LTS
+   # Host: Ubuntu 14.04 LTS
   trusty-gcc:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:trusty
     environment:
       CC: gcc
   trusty-clang:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:trusty
     environment:
       CC: clang
       
-  # Ubuntu 16.04 LTS
+  # Host: Ubuntu 16.04 LTS
   xenial-gcc:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:xenial
     environment:
       CC: gcc
   xenial-clang:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:xenial
     environment:
       CC: clang
       
-  # Ubuntu 18.04 LTS
+  # Host: Ubuntu 18.04 LTS
   bionic-gcc:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:bionic
     environment:
       CC: gcc
   bionic-clang:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:bionic
     environment:
       CC: clang
 
-  # Arch Linux Latest
+  # Host: Arch Linux
   archlinux-gcc:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:archlinux
     environment:
       CC: gcc
   archlinux-clang:
-    <<: *shared
+    <<: *shared-host
     docker:
       - image: rawrtc/ci-image:archlinux
     environment:
       CC: clang
 
+  # Cross: Linux ARMv6
+  linux-armv6:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:linux-armv6
+
+  # Cross: Linux ARMv6
+  linux-armv7:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:linux-armv7
+
+  # Cross: Android API 21 ARM
+  android-21-arm:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:android-21-arm
+
+  # Cross: Android API 21 ARM64
+  android-21-arm64:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:android-21-arm64
+
+  # Cross: Android API 27 ARM
+  android-27-arm:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:android-27-arm
+
+  # Cross: Android API 27 ARM64
+  android-27-arm64:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:android-27-arm64
+
+  # Cross: Windows x86
+  windows-x86:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:windows-x86
+
+  # Cross: Windows x64
+  #windows-x64:
+  #  <<: *shared-cross
+  #  docker:
+  #    - image: rawrtc/cross-build:windows-x64
+
+
 workflows:
   version: 2
+
+  # Build all
   build:
     jobs:
       - trusty-gcc
@@ -106,3 +160,11 @@ workflows:
       - bionic-clang
       - archlinux-gcc
       - archlinux-clang
+      - linux-armv6
+      - linux-armv7
+      - android-21-arm
+      - android-21-arm64
+      - android-27-arm
+      - android-27-arm64
+      - windows-x86
+      #- windows-x64
