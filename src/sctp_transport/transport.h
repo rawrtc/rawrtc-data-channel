@@ -2,7 +2,6 @@
 #include <rawrtcdc/data_channel.h>
 #include <rawrtcdc/external.h>
 #include <rawrtcdc/sctp_transport.h>
-
 #include <re.h>
 #include <usrsctp.h> // SCTP_EVENT_*, ...
 #include <stdio.h> // FILE

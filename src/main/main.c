@@ -1,7 +1,6 @@
 #include "main.h"
 #include "../crc32c/crc32c.h"
 #include <rawrtcdc/main.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 #include <usrsctp.h> // usrsctp_handle_timers

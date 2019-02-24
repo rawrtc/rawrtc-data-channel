@@ -32,7 +32,6 @@
  */
 #include "crc32c.h"
 #include <rawrtcdc/config.h>
-
 #include <re.h>
 
 #define DEBUG_MODULE "crc32c"

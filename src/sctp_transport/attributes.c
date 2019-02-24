@@ -2,7 +2,6 @@
 #include <rawrtcdc/data_channel.h>
 #include <rawrtcdc/sctp_capabilities.h>
 #include <rawrtcdc/sctp_transport.h>
-
 #include <re.h>
 
 /*

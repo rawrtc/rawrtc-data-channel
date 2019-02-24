@@ -1,6 +1,5 @@
 #include "transport.h"
 #include <rawrtcdc/sctp_redirect_transport.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 
