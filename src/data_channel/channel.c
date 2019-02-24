@@ -16,15 +16,15 @@
  * Caller MUST ensure that the same state is not set twice.
  */
 void rawrtc_data_channel_set_state(
-        struct rawrtc_data_channel* const channel, // not checked
-        enum rawrtc_data_channel_state const state
-) {
+    struct rawrtc_data_channel* const channel,  // not checked
+    enum rawrtc_data_channel_state const state) {
     // Set state
     // Note: Keep this here as it will prevent infinite recursion during closing/destroying
     channel->state = state;
-    DEBUG_PRINTF("Data channel '%s' state changed to %s\n",
-                 channel->parameters->label ? channel->parameters->label : "n/a",
-                 rawrtc_data_channel_state_to_name(state));
+    DEBUG_PRINTF(
+        "Data channel '%s' state changed to %s\n",
+        channel->parameters->label ? channel->parameters->label : "n/a",
+        rawrtc_data_channel_state_to_name(state));
 
     // TODO: Clear options flag?
 
@@ -55,9 +55,7 @@ void rawrtc_data_channel_set_state(
 /*
  * Destructor for an existing data channel.
  */
-static void rawrtc_data_channel_destroy(
-        void* arg
-) {
+static void rawrtc_data_channel_destroy(void* arg) {
     struct rawrtc_data_channel* const channel = arg;
 
     // Unset all handlers
@@ -77,19 +75,18 @@ static void rawrtc_data_channel_destroy(
  * Create a data channel (internal).
  */
 enum rawrtc_code rawrtc_data_channel_create_internal(
-        struct rawrtc_data_channel** const channelp, // de-referenced
-        struct rawrtc_data_transport* const transport, // referenced
-        struct rawrtc_data_channel_parameters* const parameters, // referenced
-        rawrtc_data_channel_open_handler const open_handler, // nullable
-        rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler, // nullable
-        rawrtc_data_channel_error_handler const error_handler, // nullable
-        rawrtc_data_channel_close_handler const close_handler, // nullable
-        rawrtc_data_channel_message_handler const message_handler, // nullable
-        void* const arg, // nullable
-        bool const call_handler
-) {
+    struct rawrtc_data_channel** const channelp,  // de-referenced
+    struct rawrtc_data_transport* const transport,  // referenced
+    struct rawrtc_data_channel_parameters* const parameters,  // referenced
+    rawrtc_data_channel_open_handler const open_handler,  // nullable
+    rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler,  // nullable
+    rawrtc_data_channel_error_handler const error_handler,  // nullable
+    rawrtc_data_channel_close_handler const close_handler,  // nullable
+    rawrtc_data_channel_message_handler const message_handler,  // nullable
+    void* const arg,  // nullable
+    bool const call_handler) {
     enum rawrtc_code error;
-    struct rawrtc_data_channel *channel;
+    struct rawrtc_data_channel* channel;
 
     // Check arguments
     if (!channelp || !transport || !parameters) {
@@ -126,14 +123,11 @@ enum rawrtc_code rawrtc_data_channel_create_internal(
 
     // Done
     DEBUG_PRINTF(
-            "Created data channel: label=%s, type=%d, reliability-parameter=%"PRIu32", "
-            "protocol=%s, negotiated=%s, id=%"PRIu16"\n",
-            parameters->label ? parameters->label : "n/a",
-            parameters->channel_type,
-            parameters->reliability_parameter,
-            parameters->protocol ? parameters->protocol : "n/a",
-            parameters->negotiated ? "yes" : "no",
-            parameters->id);
+        "Created data channel: label=%s, type=%d, reliability-parameter=%" PRIu32 ", "
+        "protocol=%s, negotiated=%s, id=%" PRIu16 "\n",
+        parameters->label ? parameters->label : "n/a", parameters->channel_type,
+        parameters->reliability_parameter, parameters->protocol ? parameters->protocol : "n/a",
+        parameters->negotiated ? "yes" : "no", parameters->id);
 
 out:
     if (error) {
@@ -153,10 +147,9 @@ out:
  * instead of calling the channel handler directly.
  */
 void rawrtc_data_channel_call_channel_handler(
-        struct rawrtc_data_channel* const channel, // not checked
-        rawrtc_data_channel_handler const channel_handler, // nullable
-        void* const arg
-) {
+    struct rawrtc_data_channel* const channel,  // not checked
+    rawrtc_data_channel_handler const channel_handler,  // nullable
+    void* const arg) {
     // Call handler (if any)
     if (channel_handler) {
         channel_handler(channel, arg);
@@ -173,21 +166,19 @@ void rawrtc_data_channel_call_channel_handler(
  *       of the first incoming message.
  */
 enum rawrtc_code rawrtc_data_channel_create(
-        struct rawrtc_data_channel** const channelp, // de-referenced
-        struct rawrtc_data_transport* const transport, // referenced
-        struct rawrtc_data_channel_parameters* const parameters, // referenced
-        rawrtc_data_channel_open_handler const open_handler, // nullable
-        rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler, // nullable
-        rawrtc_data_channel_error_handler const error_handler, // nullable
-        rawrtc_data_channel_close_handler const close_handler, // nullable
-        rawrtc_data_channel_message_handler const message_handler, // nullable
-        void* const arg // nullable
+    struct rawrtc_data_channel** const channelp,  // de-referenced
+    struct rawrtc_data_transport* const transport,  // referenced
+    struct rawrtc_data_channel_parameters* const parameters,  // referenced
+    rawrtc_data_channel_open_handler const open_handler,  // nullable
+    rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler,  // nullable
+    rawrtc_data_channel_error_handler const error_handler,  // nullable
+    rawrtc_data_channel_close_handler const close_handler,  // nullable
+    rawrtc_data_channel_message_handler const message_handler,  // nullable
+    void* const arg  // nullable
 ) {
     enum rawrtc_code const error = rawrtc_data_channel_create_internal(
-            channelp, transport, parameters,
-            open_handler, buffered_amount_low_handler,
-            error_handler, close_handler, message_handler,
-            arg, true);
+        channelp, transport, parameters, open_handler, buffered_amount_low_handler, error_handler,
+        close_handler, message_handler, arg, true);
 
     // Done
     return error;
@@ -198,8 +189,8 @@ enum rawrtc_code rawrtc_data_channel_create(
  * handlers.
  */
 enum rawrtc_code rawrtc_data_channel_set_arg(
-        struct rawrtc_data_channel* const channel,
-        void* const arg // nullable
+    struct rawrtc_data_channel* const channel,
+    void* const arg  // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -215,10 +206,9 @@ enum rawrtc_code rawrtc_data_channel_set_arg(
  * Send data via the data channel.
  */
 enum rawrtc_code rawrtc_data_channel_send(
-        struct rawrtc_data_channel* const channel,
-        struct mbuf* const buffer, // nullable (if empty message), referenced
-        bool const is_binary
-) {
+    struct rawrtc_data_channel* const channel,
+    struct mbuf* const buffer,  // nullable (if empty message), referenced
+    bool const is_binary) {
     // Check arguments
     if (!channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -237,9 +227,7 @@ enum rawrtc_code rawrtc_data_channel_send(
 /*
  * Close the data channel.
  */
-enum rawrtc_code rawrtc_data_channel_close(
-        struct rawrtc_data_channel* const channel
-) {
+enum rawrtc_code rawrtc_data_channel_close(struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -252,8 +240,8 @@ enum rawrtc_code rawrtc_data_channel_close(
     }
 
     // Check state
-    if (channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSING
-            || channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSED) {
+    if (channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSING ||
+        channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSED) {
         return RAWRTC_CODE_SUCCESS;
     }
 

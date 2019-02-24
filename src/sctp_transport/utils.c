@@ -3,9 +3,7 @@
 /*
  * Get the corresponding name for an SCTP transport state.
  */
-char const * rawrtc_sctp_transport_state_to_name(
-        enum rawrtc_sctp_transport_state const state
-) {
+char const* rawrtc_sctp_transport_state_to_name(enum rawrtc_sctp_transport_state const state) {
     switch (state) {
         case RAWRTC_SCTP_TRANSPORT_STATE_NEW:
             return "new";

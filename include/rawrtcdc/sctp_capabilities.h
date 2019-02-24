@@ -12,9 +12,8 @@ struct rawrtc_sctp_capabilities;
  * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_create(
-    struct rawrtc_sctp_capabilities** const capabilitiesp, // de-referenced
-    uint64_t const max_message_size
-);
+    struct rawrtc_sctp_capabilities** const capabilitiesp,  // de-referenced
+    uint64_t const max_message_size);
 
 /**
  * Get the SCTP parameter's maximum message size value.
@@ -23,6 +22,5 @@ enum rawrtc_code rawrtc_sctp_capabilities_create(
  *       receiving messages of arbitrary size.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
-    uint64_t* const max_message_sizep, // de-referenced
-    struct rawrtc_sctp_capabilities* const capabilities
-);
+    uint64_t* const max_message_sizep,  // de-referenced
+    struct rawrtc_sctp_capabilities* const capabilities);

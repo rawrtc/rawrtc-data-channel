@@ -10,9 +10,8 @@
  *       receiving messages of arbitrary size.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
-        uint64_t* const max_message_sizep, // de-referenced
-        struct rawrtc_sctp_capabilities* const capabilities
-) {
+    uint64_t* const max_message_sizep,  // de-referenced
+    struct rawrtc_sctp_capabilities* const capabilities) {
     // Check arguments
     if (!capabilities) {
         return RAWRTC_CODE_INVALID_ARGUMENT;

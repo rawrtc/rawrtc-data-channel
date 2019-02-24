@@ -8,9 +8,8 @@
  * Get the current state of the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_state(
-        enum rawrtc_sctp_transport_state* const statep, // de-referenced
-        struct rawrtc_sctp_transport* const transport
-) {
+    enum rawrtc_sctp_transport_state* const statep,  // de-referenced
+    struct rawrtc_sctp_transport* const transport) {
     // Check arguments
     if (!statep || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -25,9 +24,8 @@ enum rawrtc_code rawrtc_sctp_transport_get_state(
  * Get the local port of the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_port(
-        uint16_t* const portp, // de-referenced
-        struct rawrtc_sctp_transport* const transport
-) {
+    uint16_t* const portp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport) {
     // Check arguments
     if (!portp || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -42,9 +40,8 @@ enum rawrtc_code rawrtc_sctp_transport_get_port(
  * Get the number of streams allocated for the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_n_streams(
-        uint16_t* const n_streamsp, // de-referenced
-        struct rawrtc_sctp_transport* const transport
-) {
+    uint16_t* const n_streamsp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport) {
     // Check arguments
     if (!n_streamsp || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -60,7 +57,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_n_streams(
  * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
-        struct rawrtc_sctp_capabilities** const capabilitiesp // de-referenced
+    struct rawrtc_sctp_capabilities** const capabilitiesp  // de-referenced
 ) {
     return rawrtc_sctp_capabilities_create(capabilitiesp, RAWRTC_SCTP_TRANSPORT_MAX_MESSAGE_SIZE);
 }
@@ -69,8 +66,8 @@ enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
  * Set the SCTP transport's data channel handler.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
-        struct rawrtc_sctp_transport* const transport,
-        rawrtc_data_channel_handler const data_channel_handler // nullable
+    struct rawrtc_sctp_transport* const transport,
+    rawrtc_data_channel_handler const data_channel_handler  // nullable
 ) {
     // Check arguments
     if (!transport) {
@@ -87,9 +84,8 @@ enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_data_channel_handler(
-        rawrtc_data_channel_handler* const data_channel_handlerp, // de-referenced
-        struct rawrtc_sctp_transport* const transport
-) {
+    rawrtc_data_channel_handler* const data_channel_handlerp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport) {
     // Check arguments
     if (!data_channel_handlerp || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -108,8 +104,8 @@ enum rawrtc_code rawrtc_sctp_transport_get_data_channel_handler(
  * Set the SCTP transport's state change handler.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
-        struct rawrtc_sctp_transport* const transport,
-        rawrtc_sctp_transport_state_change_handler const state_change_handler // nullable
+    struct rawrtc_sctp_transport* const transport,
+    rawrtc_sctp_transport_state_change_handler const state_change_handler  // nullable
 ) {
     // Check arguments
     if (!transport) {
@@ -126,9 +122,8 @@ enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_state_change_handler(
-        rawrtc_sctp_transport_state_change_handler* const state_change_handlerp, // de-referenced
-        struct rawrtc_sctp_transport* const transport
-) {
+    rawrtc_sctp_transport_state_change_handler* const state_change_handlerp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport) {
     // Check arguments
     if (!state_change_handlerp || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;

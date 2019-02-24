@@ -7,9 +7,8 @@
  * Get the state of the SCTP redirect transport.
  */
 enum rawrtc_code rawrtc_sctp_redirect_transport_get_state(
-        enum rawrtc_sctp_redirect_transport_state* const statep, // de-referenced
-        struct rawrtc_sctp_redirect_transport* const transport
-) {
+    enum rawrtc_sctp_redirect_transport_state* const statep,  // de-referenced
+    struct rawrtc_sctp_redirect_transport* const transport) {
     // Check arguments
     if (!statep || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -24,9 +23,8 @@ enum rawrtc_code rawrtc_sctp_redirect_transport_get_state(
  * Get the redirected local SCTP port of the SCTP redirect transport.
  */
 enum rawrtc_code rawrtc_sctp_redirect_transport_get_port(
-        uint16_t* const portp, // de-referenced
-        struct rawrtc_sctp_redirect_transport* const transport
-) {
+    uint16_t* const portp,  // de-referenced
+    struct rawrtc_sctp_redirect_transport* const transport) {
     // Check arguments
     if (!portp || !transport) {
         return RAWRTC_CODE_INVALID_ARGUMENT;

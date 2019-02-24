@@ -3,9 +3,7 @@
 /*
  * Get the corresponding name for a data channel state.
  */
-char const * rawrtc_data_channel_state_to_name(
-        enum rawrtc_data_channel_state const state
-) {
+char const* rawrtc_data_channel_state_to_name(enum rawrtc_data_channel_state const state) {
     switch (state) {
         case RAWRTC_DATA_CHANNEL_STATE_CONNECTING:
             return "connecting";

@@ -11,9 +11,7 @@
 /*
  * Destructor for an existing data transport.
  */
-static void rawrtc_data_transport_destroy(
-        void* arg
-) {
+static void rawrtc_data_transport_destroy(void* arg) {
     struct rawrtc_data_transport* const transport = arg;
 
     // Un-reference
@@ -24,14 +22,13 @@ static void rawrtc_data_transport_destroy(
  * Create a data transport instance.
  */
 enum rawrtc_code rawrtc_data_transport_create(
-        struct rawrtc_data_transport** const transportp, // de-referenced
-        enum rawrtc_data_transport_type const type,
-        void* const internal_transport, // referenced
-        rawrtc_data_transport_channel_create_handler const channel_create_handler,
-        rawrtc_data_transport_channel_close_handler const channel_close_handler,
-        rawrtc_data_transport_channel_send_handler const channel_send_handler,
-        rawrtc_data_transport_channel_set_streaming_handler const channel_set_streaming_handler
-) {
+    struct rawrtc_data_transport** const transportp,  // de-referenced
+    enum rawrtc_data_transport_type const type,
+    void* const internal_transport,  // referenced
+    rawrtc_data_transport_channel_create_handler const channel_create_handler,
+    rawrtc_data_transport_channel_close_handler const channel_close_handler,
+    rawrtc_data_transport_channel_send_handler const channel_send_handler,
+    rawrtc_data_transport_channel_set_streaming_handler const channel_set_streaming_handler) {
     struct rawrtc_data_transport* transport;
 
     // Check arguments
