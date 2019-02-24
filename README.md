@@ -50,14 +50,15 @@ Features with a check mark are already implemented.
 
 5. *Can I use it in a threaded environment?*
 
-   Yes. Just make sure you're always calling it from the same thread or use
-   a lock.
+   Yes. Just make sure you're always calling it from the same thread the event
+   loop is running on or [use the message queues provided by re][re-mqueue] to
+   push data to the event loop thread.
 
 6. *Does it create threads?*
 
-   We have
-   [this issue](https://github.com/NEAT-project/usrsctp-neat/issues/12) but
-   hope to resolve it soon.
+   No. However, there is an
+   [issue with the usrsctp dependency][usrsctp-neat-issue-12] which will
+   hopefully be resolved soon.
 
 7. *Is this a custom SCTP implementation?*
 
@@ -66,59 +67,22 @@ Features with a check mark are already implemented.
 
 ## Prerequisites
 
-The following packages are required:
+The following tools are required:
 
 * [git][git]
-* [cmake][cmake] >= 3.2
-* pkg-config (`pkgconf` for newer FreeBSD versions)
-* OpenSSL >= 1.0.2 (`libssl-dev` on Debian, `openssl` on OSX and FreeBSD)
-* GNU make (`gmake` on FreeBSD for `re` and `rew` dependencies)
-
-or
-
-* [Docker][docker] (see the *[Docker](#docker)* section for instruction)
+* [ninja][ninja] >= 1.5
+* [meson][meson] >= 0.46.0
+* Optional: pkg-config (`pkgconf` for newer FreeBSD versions)
 
 ## Build
 
-The following instruction will use a custom *prefix* to avoid installing
-the necessary dependencies and this library system-wide.
-
-### Dependencies
-
-    cd <path-to-rawrtcdc>
-    ./make-dependencies.sh
-
-### Package Configuration Path
-
-The following environment variable is required for both Meson and CMake to find
-the previously built dependencies:
-
-    export PKG_CONFIG_PATH=${PWD}/build/prefix/lib/pkgconfig
-
-Note that this command will need to be repeated once the terminal has been
-closed.
-
-### Compile
-
-#### CMake
-
-    cd <path-to-rawrtcdc>/build
-    cmake -DCMAKE_INSTALL_PREFIX=${PWD}/prefix ..
-    make install
-
-## Docker
-
-If you don't want to do these steps manually, you can use [Docker][docker] to
-build this library:
-
-    cd <path-to-rawrtcdc>
-    docker build . -t rawrtcdc
-
-The library and its dependencies will be built inside the docker image and can
-be accessed there in the following way:
-
-    docker run -it rawrtcdc bash
-    ls -l /rawrtcdc/build/prefix
+```bash
+cd <path-to-rawrtcdc>
+mkdir build
+meson build
+cd build
+ninja
+```
 
 ## Getting Started
 
@@ -130,7 +94,12 @@ into your stack.
 Before doing anything, initialise the library:
 
 ```c
-error = rawrtcdc_init(init_re, timer_handler);
+#include <rawrtcc.h>
+#include <rawrtcdc.h>
+
+[...]
+
+enum rawrtc_code error = rawrtcdc_init(init_re, timer_handler);
 if (error) {
     your_log_function("Initialisation failed: %s", rawrtc_code_to_str(error));
 }
@@ -145,10 +114,7 @@ Unless you're initialising [re][re] yourselves, the `init_re` parameter to
 The timer handler function works in the following way (see comments inline):
 
 ```c
-enum rawrtc_code timer_handler(
-        bool const on,
-        uint_fast16_t const interval
-) {
+enum rawrtc_code timer_handler(bool const on, uint_fast16_t const interval) {
     if (on) {
         // Start a timer that calls `rawrtcdc_timer_tick` every `interval`
         // milliseconds.
@@ -181,8 +147,8 @@ struct rawrtc_sctp_transport_context context = {
 // Create SCTP transport
 struct rawrtc_sctp_transport transport;
 error = rawrtc_sctp_transport_create_from_external(
-        &transport, &context, local_sctp_port,
-        data_channel_handler, state_change_handler, arg);
+    &transport, &context, local_sctp_port,
+    data_channel_handler, state_change_handler, arg);
 if (error) {
     your_log_function("Creating SCTP transport failed: %s",
                       rawrtc_code_to_str(error));
@@ -205,7 +171,7 @@ everything in this library that allocates dynamic memory works that way.
 Furthermore, from this moment on your DTLS transport should feed SCTP packets
 into the SCTP transport by calling
 `rawrtc_sctp_transport_feed_inbound(transport, buffer, ecn_bits)`. Check the
-[header file][rawrtcc.h] for details on the parameters.
+[header file][sctp_transport.h] for details on the parameters.
 
 You're probably already wondering what the SCTP transport context is all about.
 Basically, it contains pointers to some handler functions you will need to
@@ -214,18 +180,14 @@ pointer to the various handler functions. So, let's go through them:
 
 ```c
 enum rawrtc_code dtls_role_getter(
-        enum rawrtc_external_dtls_role* const rolep,
-        void* const arg
-) {
+    enum rawrtc_external_dtls_role* const rolep, void* const arg) {
     // Set the local role of your DTLS transport
     *rolep = your_dtls_transport.local_role;
     return RAWRTC_CODE_SUCCESS;
 }
 
 enum rawrtc_code dtls_transport_state_getter(
-        enum rawrtc_external_dtls_transport_state* const statep,
-        void* const arg
-) {
+    enum rawrtc_external_dtls_transport_state* const statep, void* const arg) {
     // Set the state of your DTLS transport
     *statep = your_dtls_transport.state;
     return RAWRTC_CODE_SUCCESS;
@@ -238,11 +200,8 @@ fed into the DTLS transport as application data and sent to the other peer:
 
 ```c
 enum rawrtc_code sctp_transport_outbound_handler(
-        struct mbuf* const buffer,
-        uint8_t const tos,
-        uint8_t const set_df,
-        void* const arg
-) {
+    struct mbuf* const buffer, uint8_t const tos, uint8_t const set_df,
+    void* const arg) {
     // Feed the data to the DTLS transport
     your_dtls_transport_send(buffer, tos, set_df);
     return RAWRTC_CODE_SUCCESS;
@@ -255,16 +214,14 @@ position and `mbuf_get_left(buffer)` to get the amount of bytes left in the
 buffer.
 Be aware `buffer` in this case is not dynamically allocated and shall not be
 referenced. This has been done for optimisation purposes.
-Check the [header file][rawrtcc.h] for further details on the various
+Check the [header file][external.h] for further details on the various
 parameters passed to this handler function.
 
 The following handler is merely a way to let you know that you should not feed
 any data to the SCTP transport anymore:
 
 ```c
-void sctp_transport_detach_handler(
-        void* const arg
-) {
+void sctp_transport_detach_handler(void* const arg) {
     // Detach from DTLS transport
     your_dtls_transport.stop_feeding_data = true;
 }
@@ -276,9 +233,7 @@ free'd. Be aware that you may not call any SCTP transport or data channel
 functions once this handler is being called.
 
 ```c
-void sctp_transport_destroy(
-        void* const arg
-) {
+void sctp_transport_destroy(void* const arg) {
     // Your cleanup code here
 }
 ```
@@ -306,15 +261,15 @@ data channel with the following properties:
 // Create data channel parameters
 struct rawrtc_data_channel_parameters parameters;
 error = rawrtc_data_channel_parameters_create(
-        &parameters, "meow", RAWRTC_DATA_CHANNEL_TYPE_RELIABLE_UNORDERED, 0,
-        "v1.cat-noises", true, 42);
+    &parameters, "meow", RAWRTC_DATA_CHANNEL_TYPE_RELIABLE_UNORDERED, 0,
+    "v1.cat-noises", true, 42);
 
 // Create the data channel, using the transport and the parameters
 struct rawrtc_data_channel channel;
 error = rawrtc_data_channel_create(
-        &channel, transport, parameters,
-        open_handler, buffered_amount_low_handler, error_handler,
-        close_handler, message_handler, pointer_passed_to_handlers);
+    &channel, transport, parameters,
+    open_handler, buffered_amount_low_handler, error_handler,
+    close_handler, message_handler, pointer_passed_to_handlers);
 
 mem_deref(parameters);
 ```
@@ -323,7 +278,7 @@ Instead of adding handler functions on creation, you can also pass `NULL` and
 register handler functions later.
 
 For further explanation on the various parameters, check the
-[header file][rawrtcc.h].
+[header files][headers].
 
 Once the SCTP transport goes into the *connected* state, the created channels
 will open. If you see this happening, this is a good indication that you've set
@@ -341,6 +296,11 @@ Once your code exits, you should call `rawrtcdc_close(close_re)`. If the
 Do you feel like this now? If yes, please join our [gitter chat][gitter], so we
 can help you and work out what's missing in this little tutorial.
 
+## Contributing
+
+When creating a pull request, it is recommended to run `format-all.sh` to
+apply a consistent code style.
+
 
 
 [circleci-badge]: https://circleci.com/gh/rawrtc/rawrtc-data-channel.svg?style=shield
@@ -352,7 +312,7 @@ can help you and work out what's missing in this little tutorial.
 [gitter-icon]: https://badges.gitter.im/rawrtc/Lobby.svg
 
 [w3c-webrtc]: https://www.w3.org/TR/webrtc/
-[w3c-ortc]: http://draft.ortc.org
+[w3c-ortc]: https://draft.ortc.org
 [dcep]: https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-09
 [sctp-dc]: https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13
 [#14]: https://github.com/rawrtc/rawrtc-data-channel/issues/14
@@ -362,10 +322,14 @@ can help you and work out what's missing in this little tutorial.
 [rawrtc]: https://github.com/rawrtc/rawrtc
 
 [git]: https://git-scm.com
-[cmake]: https://cmake.org
-[docker]: https://www.docker.com/
+[meson]: https://mesonbuild.com
+[ninja]: https://ninja-build.org
 
-[rawrtcc.h]: src/include/rawrtcdc.h
+[re-mqueue]: http://www.creytiv.com/doxygen/re-dox/html/re__mqueue_8h.html
+[usrsctp-neat-issue-12]: https://github.com/NEAT-project/usrsctp-neat/issues/12
+[sctp_transport.h]: include/rawrtcdc/sctp_transport.h
+[external.h]: include/rawrtcdc/external.h
+[headers]: include/rawrtcdc
 [re]: https://github.com/creytiv/re
-[re-mbuf]: http://www.creytiv.com/doxygen/re-dox/html/mbuf_8c.html
+[re-mbuf]: http://www.creytiv.com/doxygen/re-dox/html/re__mbuf_8h.html
 [owl-meme]: ../assets/draw-the-rest-of-the-owl.jpg?raw=true
