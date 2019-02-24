@@ -26,14 +26,14 @@ enum rawrtc_sctp_transport_state {
     RAWRTC_SCTP_TRANSPORT_STATE_NEW,
     RAWRTC_SCTP_TRANSPORT_STATE_CONNECTING,
     RAWRTC_SCTP_TRANSPORT_STATE_CONNECTED,
-    RAWRTC_SCTP_TRANSPORT_STATE_CLOSED
+    RAWRTC_SCTP_TRANSPORT_STATE_CLOSED,
 };
 
 /**
  * SCTP transport default MTU
  */
 enum {
-    RAWRTC_SCTP_TRANSPORT_DEFAULT_MTU = 1200
+    RAWRTC_SCTP_TRANSPORT_DEFAULT_MTU = 1200,
 };
 
 /**
@@ -45,9 +45,7 @@ struct rawrtc_sctp_transport;
  * SCTP transport state change handler.
  */
 typedef void (*rawrtc_sctp_transport_state_change_handler)(
-    enum rawrtc_sctp_transport_state const state,
-    void* const arg
-);
+    enum rawrtc_sctp_transport_state const state, void* const arg);
 
 /**
  * Create an SCTP transport from an external DTLS transport.
@@ -57,12 +55,12 @@ typedef void (*rawrtc_sctp_transport_state_change_handler)(
  *       attached after creation of this transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_create_from_external(
-    struct rawrtc_sctp_transport** const transportp, // de-referenced
-    struct rawrtc_sctp_transport_context* const context, // copied
-    uint16_t port, // zeroable
-    rawrtc_data_channel_handler const data_channel_handler, // nullable
-    rawrtc_sctp_transport_state_change_handler const state_change_handler, // nullable
-    void* const arg // nullable
+    struct rawrtc_sctp_transport** const transportp,  // de-referenced
+    struct rawrtc_sctp_transport_context* const context,  // copied
+    uint16_t port,  // zeroable
+    rawrtc_data_channel_handler const data_channel_handler,  // nullable
+    rawrtc_sctp_transport_state_change_handler const state_change_handler,  // nullable
+    void* const arg  // nullable
 );
 
 /**
@@ -70,8 +68,8 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
  * `*transportp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_data_transport(
-    struct rawrtc_data_transport** const transportp, // de-referenced
-    struct rawrtc_sctp_transport* const sctp_transport // referenced
+    struct rawrtc_data_transport** const transportp,  // de-referenced
+    struct rawrtc_sctp_transport* const sctp_transport  // referenced
 );
 
 /**
@@ -79,16 +77,14 @@ enum rawrtc_code rawrtc_sctp_transport_get_data_transport(
  */
 enum rawrtc_code rawrtc_sctp_transport_start(
     struct rawrtc_sctp_transport* const transport,
-    struct rawrtc_sctp_capabilities const * const remote_capabilities, // copied
-    uint16_t remote_port // zeroable
+    struct rawrtc_sctp_capabilities const* const remote_capabilities,  // copied
+    uint16_t remote_port  // zeroable
 );
 
 /**
  * Stop and close the SCTP transport.
  */
-enum rawrtc_code rawrtc_sctp_transport_stop(
-    struct rawrtc_sctp_transport* const transport
-);
+enum rawrtc_code rawrtc_sctp_transport_stop(struct rawrtc_sctp_transport* const transport);
 
 /**
  * Feed inbound data to the SCTP transport.
@@ -106,8 +102,7 @@ enum rawrtc_code rawrtc_sctp_transport_stop(
 enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     struct rawrtc_sctp_transport* const transport,
     struct mbuf* const buffer,
-    uint8_t const ecn_bits
-);
+    uint8_t const ecn_bits);
 
 /**
  * Set the SCTP transport's maximum transmission unit (MTU).
@@ -117,9 +112,7 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
  *       started.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_mtu(
-    struct rawrtc_sctp_transport* const transport,
-    uint32_t mtu
-);
+    struct rawrtc_sctp_transport* const transport, uint32_t mtu);
 
 /**
  * Get the current SCTP transport's maximum transmission unit (MTU)
@@ -129,10 +122,9 @@ enum rawrtc_code rawrtc_sctp_transport_set_mtu(
  *       started.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_mtu(
-    uint32_t* const mtup, // de-referenced
-    bool* const mtu_discovery_enabledp, // de-referenced
-    struct rawrtc_sctp_transport* const transport
-);
+    uint32_t* const mtup,  // de-referenced
+    bool* const mtu_discovery_enabledp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Enable MTU discovery for the SCTP transport.
@@ -141,47 +133,43 @@ enum rawrtc_code rawrtc_sctp_transport_get_mtu(
  *       been started.
  */
 enum rawrtc_code rawrtc_sctp_transport_enable_mtu_discovery(
-    struct rawrtc_sctp_transport* const transport
-);
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Set the SCTP transport's context.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_context(
     struct rawrtc_sctp_transport* const transport,
-    struct rawrtc_sctp_transport_context* const context // copied
+    struct rawrtc_sctp_transport_context* const context  // copied
 );
 
 /**
  * Get the current state of the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_state(
-    enum rawrtc_sctp_transport_state* const statep, // de-referenced
-    struct rawrtc_sctp_transport* const transport
-);
+    enum rawrtc_sctp_transport_state* const statep,  // de-referenced
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Get the local port of the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_port(
-    uint16_t* const portp, // de-referenced
-    struct rawrtc_sctp_transport* const transport
-);
+    uint16_t* const portp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Get the number of streams allocated for the SCTP transport.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_n_streams(
-    uint16_t* const n_streamsp, // de-referenced
-    struct rawrtc_sctp_transport* const transport
-);
+    uint16_t* const n_streamsp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Get the local SCTP transport capabilities (static).
  * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
-    struct rawrtc_sctp_capabilities** const capabilitiesp // de-referenced
+    struct rawrtc_sctp_capabilities** const capabilitiesp  // de-referenced
 );
 
 /**
@@ -189,7 +177,7 @@ enum rawrtc_code rawrtc_sctp_transport_get_capabilities(
  */
 enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
     struct rawrtc_sctp_transport* const transport,
-    rawrtc_data_channel_handler const data_channel_handler // nullable
+    rawrtc_data_channel_handler const data_channel_handler  // nullable
 );
 
 /**
@@ -197,16 +185,15 @@ enum rawrtc_code rawrtc_sctp_transport_set_data_channel_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_data_channel_handler(
-    rawrtc_data_channel_handler* const data_channel_handlerp, // de-referenced
-    struct rawrtc_sctp_transport* const transport
-);
+    rawrtc_data_channel_handler* const data_channel_handlerp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Set the SCTP transport's state change handler.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
     struct rawrtc_sctp_transport* const transport,
-    rawrtc_sctp_transport_state_change_handler const state_change_handler // nullable
+    rawrtc_sctp_transport_state_change_handler const state_change_handler  // nullable
 );
 
 /**
@@ -214,13 +201,10 @@ enum rawrtc_code rawrtc_sctp_transport_set_state_change_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_sctp_transport_get_state_change_handler(
-    rawrtc_sctp_transport_state_change_handler* const state_change_handlerp, // de-referenced
-    struct rawrtc_sctp_transport* const transport
-);
+    rawrtc_sctp_transport_state_change_handler* const state_change_handlerp,  // de-referenced
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Get the corresponding name for an SCTP transport state.
  */
-char const * rawrtc_sctp_transport_state_to_name(
-    enum rawrtc_sctp_transport_state const state
-);
+char const* rawrtc_sctp_transport_state_to_name(enum rawrtc_sctp_transport_state const state);

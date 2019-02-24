@@ -7,9 +7,7 @@
  * Print debug information for SCTP capabilities.
  */
 int rawrtc_sctp_capabilities_debug(
-        struct re_printf* const pf,
-        struct rawrtc_sctp_capabilities const* const capabilities
-) {
+    struct re_printf* const pf, struct rawrtc_sctp_capabilities const* const capabilities) {
     int err = 0;
 
     // Check arguments
@@ -20,7 +18,7 @@ int rawrtc_sctp_capabilities_debug(
     err |= re_hprintf(pf, "  SCTP Capabilities <%p>:\n", capabilities);
 
     // Maximum message size
-    err |= re_hprintf(pf, "    max_message_size=%"PRIu64"\n", capabilities->max_message_size);
+    err |= re_hprintf(pf, "    max_message_size=%" PRIu64 "\n", capabilities->max_message_size);
 
     // Done
     return err;
@@ -31,9 +29,8 @@ int rawrtc_sctp_capabilities_debug(
  * `*capabilitiesp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_sctp_capabilities_create(
-        struct rawrtc_sctp_capabilities** const capabilitiesp, // de-referenced
-        uint64_t const max_message_size
-) {
+    struct rawrtc_sctp_capabilities** const capabilitiesp,  // de-referenced
+    uint64_t const max_message_size) {
     struct rawrtc_sctp_capabilities* capabilities;
 
     // Check arguments

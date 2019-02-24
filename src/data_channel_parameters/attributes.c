@@ -14,9 +14,8 @@
  * must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_label(
-        char** const labelp, // de-referenced
-        struct rawrtc_data_channel_parameters* const parameters
-) {
+    char** const labelp,  // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters) {
     // Check arguments
     if (!labelp || !parameters) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -35,9 +34,8 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_label(
  * Get the channel type from the data channel parameters.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_channel_type(
-        enum rawrtc_data_channel_type* const channel_typep, // de-referenced
-        struct rawrtc_data_channel_parameters* const parameters
-) {
+    enum rawrtc_data_channel_type* const channel_typep,  // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters) {
     // Check arguments
     if (!channel_typep || !parameters) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -56,9 +54,8 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_channel_type(
  * `RAWRTC_CODE_SUCCESS` will be returned.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_reliability_parameter(
-        uint32_t* const reliability_parameterp, // de-referenced
-        struct rawrtc_data_channel_parameters* const parameters
-) {
+    uint32_t* const reliability_parameterp,  // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters) {
     // Check arguments
     if (!reliability_parameterp || !parameters) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -85,9 +82,8 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_reliability_parameter(
  * must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_protocol(
-        char** const protocolp, // de-referenced
-        struct rawrtc_data_channel_parameters* const parameters
-) {
+    char** const protocolp,  // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters) {
     // Check arguments
     if (!protocolp || !parameters) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -106,9 +102,8 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_protocol(
  * Get the 'negotiated' flag from the data channel parameters.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_negotiated(
-        bool* const negotiatedp, // de-referenced
-        struct rawrtc_data_channel_parameters* const parameters
-) {
+    bool* const negotiatedp,  // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters) {
     // Check arguments
     if (!negotiatedp || !parameters) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -126,9 +121,8 @@ enum rawrtc_code rawrtc_data_channel_parameters_get_negotiated(
  * `false`. Otherwise, `RAWRTC_CODE_SUCCESS` will be returned.
  */
 enum rawrtc_code rawrtc_data_channel_parameters_get_id(
-        uint16_t* const idp, // de-referenced
-        struct rawrtc_data_channel_parameters* const parameters
-) {
+    uint16_t* const idp,  // de-referenced
+    struct rawrtc_data_channel_parameters* const parameters) {
     // Check arguments
     if (!idp || !parameters) {
         return RAWRTC_CODE_INVALID_ARGUMENT;

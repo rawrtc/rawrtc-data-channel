@@ -7,7 +7,7 @@
  */
 enum rawrtc_external_dtls_role {
     RAWRTC_EXTERNAL_DTLS_ROLE_CLIENT,
-    RAWRTC_EXTERNAL_DTLS_ROLE_SERVER
+    RAWRTC_EXTERNAL_DTLS_ROLE_SERVER,
 };
 
 /**
@@ -29,9 +29,8 @@ enum rawrtc_external_dtls_transport_state {
  * other code in case of an error.
  */
 typedef enum rawrtc_code (*rawrtc_dtls_role_getter)(
-    enum rawrtc_external_dtls_role* const rolep, // de-referenced
-    void* const arg
-);
+    enum rawrtc_external_dtls_role* const rolep,  // de-referenced
+    void* const arg);
 
 /**
  * DTLS transport state getter.
@@ -43,9 +42,8 @@ typedef enum rawrtc_code (*rawrtc_dtls_role_getter)(
  * other code in case of an error.
  */
 typedef enum rawrtc_code (*rawrtc_dtls_transport_state_getter)(
-    enum rawrtc_external_dtls_transport_state* const statep, // de-referenced
-    void* const arg
-);
+    enum rawrtc_external_dtls_transport_state* const statep,  // de-referenced
+    void* const arg);
 
 /**
  * SCTP transport outbound data handler.
@@ -64,11 +62,7 @@ typedef enum rawrtc_code (*rawrtc_dtls_transport_state_getter)(
  * dropped) or any other code in case of an error.
  */
 typedef enum rawrtc_code (*rawrtc_sctp_transport_outbound_handler)(
-    struct mbuf* const buffer,
-    uint8_t const tos,
-    uint8_t const set_df,
-    void* const arg
-);
+    struct mbuf* const buffer, uint8_t const tos, uint8_t const set_df, void* const arg);
 
 /**
  * SCTP transport detach handler.
@@ -78,9 +72,7 @@ typedef enum rawrtc_code (*rawrtc_sctp_transport_outbound_handler)(
  *
  * `arg` is the argument passed to the SCTP transport context.
  */
-typedef void (*rawrtc_sctp_transport_detach_handler)(
-    void* const arg
-);
+typedef void (*rawrtc_sctp_transport_detach_handler)(void* const arg);
 
 /**
  * SCTP transport destroyed handler.
@@ -91,9 +83,7 @@ typedef void (*rawrtc_sctp_transport_detach_handler)(
  *
  * `arg` is the argument passed to the SCTP transport context.
  */
-typedef void (*rawrtc_sctp_transport_destroyed_handler)(
-    void* const arg
-);
+typedef void (*rawrtc_sctp_transport_destroyed_handler)(void* const arg);
 
 /**
  * SCTP transport context.
@@ -102,8 +92,8 @@ struct rawrtc_sctp_transport_context {
     rawrtc_dtls_role_getter role_getter;
     rawrtc_dtls_transport_state_getter state_getter;
     rawrtc_sctp_transport_outbound_handler outbound_handler;
-    rawrtc_sctp_transport_detach_handler detach_handler; // nullable
-    rawrtc_sctp_transport_destroyed_handler destroyed_handler; // nullable
+    rawrtc_sctp_transport_detach_handler detach_handler;  // nullable
+    rawrtc_sctp_transport_destroyed_handler destroyed_handler;  // nullable
     bool trace_packets;
-    void* arg; // nullable
+    void* arg;  // nullable
 };

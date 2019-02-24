@@ -69,10 +69,7 @@ code = '''
 int main(int argc, char* argv[]) {
     uint32_t eax, ecx;
     eax = 1;
-    __asm__("cpuid" \
-            : "=c"(ecx) \
-            : "a"(eax) \
-            : "%ebx", "%edx");
+    __asm__("cpuid" : "=c"(ecx) : "a"(eax) : "%ebx", "%edx");
     return 0;
 }
 '''

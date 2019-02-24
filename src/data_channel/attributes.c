@@ -14,9 +14,8 @@
  * Get the current state of the data channel.
  */
 enum rawrtc_code rawrtc_data_channel_get_state(
-        enum rawrtc_data_channel_state* const statep, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    enum rawrtc_data_channel_state* const statep,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!statep || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -32,9 +31,8 @@ enum rawrtc_code rawrtc_data_channel_get_state(
  * data of the data channel.
  */
 enum rawrtc_code rawrtc_data_channel_get_buffered_amount(
-        uint64_t* const buffered_amountp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    uint64_t* const buffered_amountp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!buffered_amountp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -49,9 +47,7 @@ enum rawrtc_code rawrtc_data_channel_get_buffered_amount(
  * outgoing application data.
  */
 enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_threshold(
-        struct rawrtc_data_channel* const channel,
-        uint64_t const buffered_amount_low_threshold
-) {
+    struct rawrtc_data_channel* const channel, uint64_t const buffered_amount_low_threshold) {
     // Check arguments
     if (!channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -67,9 +63,8 @@ enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_threshold(
  * outgoing application data.
  */
 enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_threshold(
-        uint64_t* const buffered_amount_low_thresholdp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    uint64_t* const buffered_amount_low_thresholdp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!buffered_amount_low_thresholdp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -82,9 +77,7 @@ enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_threshold(
 /*
  * Unset the handler argument and all handlers of the data channel.
  */
-enum rawrtc_code rawrtc_data_channel_unset_handlers(
-        struct rawrtc_data_channel* const channel
-) {
+enum rawrtc_code rawrtc_data_channel_unset_handlers(struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -109,9 +102,8 @@ enum rawrtc_code rawrtc_data_channel_unset_handlers(
  * `*parametersp` must be unreferenced.
  */
 enum rawrtc_code rawrtc_data_channel_get_parameters(
-        struct rawrtc_data_channel_parameters** const parametersp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    struct rawrtc_data_channel_parameters** const parametersp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!parametersp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -130,9 +122,7 @@ enum rawrtc_code rawrtc_data_channel_get_parameters(
  *       fail with a *still in use* error.
  */
 enum rawrtc_code rawrtc_data_channel_set_streaming(
-        struct rawrtc_data_channel* const channel,
-        bool const on
-) {
+    struct rawrtc_data_channel* const channel, bool const on) {
     enum rawrtc_code error;
 
     // Check arguments
@@ -141,14 +131,14 @@ enum rawrtc_code rawrtc_data_channel_set_streaming(
     }
 
     // Check state
-    if (channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSING
-        || channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSED) {
+    if (channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSING ||
+        channel->state == RAWRTC_DATA_CHANNEL_STATE_CLOSED) {
         return RAWRTC_CODE_INVALID_STATE;
     }
 
     // Does anything change?
-    if ((on && channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED)
-        || (!on && !(channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED))) {
+    if ((on && channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED) ||
+        (!on && !(channel->flags & RAWRTC_DATA_CHANNEL_FLAGS_STREAMED))) {
         return RAWRTC_CODE_SUCCESS;
     }
 
@@ -173,8 +163,8 @@ enum rawrtc_code rawrtc_data_channel_set_streaming(
  * Set the data channel's open handler.
  */
 enum rawrtc_code rawrtc_data_channel_set_open_handler(
-        struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_open_handler const open_handler // nullable
+    struct rawrtc_data_channel* const channel,
+    rawrtc_data_channel_open_handler const open_handler  // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -191,9 +181,8 @@ enum rawrtc_code rawrtc_data_channel_set_open_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_open_handler(
-        rawrtc_data_channel_open_handler* const open_handlerp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    rawrtc_data_channel_open_handler* const open_handlerp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!open_handlerp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -212,8 +201,8 @@ enum rawrtc_code rawrtc_data_channel_get_open_handler(
  * Set the data channel's buffered amount low handler.
  */
 enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_handler(
-        struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler // nullable
+    struct rawrtc_data_channel* const channel,
+    rawrtc_data_channel_buffered_amount_low_handler const buffered_amount_low_handler  // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -230,9 +219,9 @@ enum rawrtc_code rawrtc_data_channel_set_buffered_amount_low_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_handler(
-        rawrtc_data_channel_buffered_amount_low_handler* const buffered_amount_low_handlerp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    rawrtc_data_channel_buffered_amount_low_handler* const
+        buffered_amount_low_handlerp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!buffered_amount_low_handlerp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -251,8 +240,8 @@ enum rawrtc_code rawrtc_data_channel_get_buffered_amount_low_handler(
  * Set the data channel's error handler.
  */
 enum rawrtc_code rawrtc_data_channel_set_error_handler(
-        struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_error_handler const error_handler // nullable
+    struct rawrtc_data_channel* const channel,
+    rawrtc_data_channel_error_handler const error_handler  // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -269,9 +258,8 @@ enum rawrtc_code rawrtc_data_channel_set_error_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_error_handler(
-        rawrtc_data_channel_error_handler* const error_handlerp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    rawrtc_data_channel_error_handler* const error_handlerp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!error_handlerp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -290,8 +278,8 @@ enum rawrtc_code rawrtc_data_channel_get_error_handler(
  * Set the data channel's close handler.
  */
 enum rawrtc_code rawrtc_data_channel_set_close_handler(
-        struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_close_handler const close_handler // nullable
+    struct rawrtc_data_channel* const channel,
+    rawrtc_data_channel_close_handler const close_handler  // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -308,9 +296,8 @@ enum rawrtc_code rawrtc_data_channel_set_close_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_close_handler(
-        rawrtc_data_channel_close_handler* const close_handlerp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    rawrtc_data_channel_close_handler* const close_handlerp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!close_handlerp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -329,8 +316,8 @@ enum rawrtc_code rawrtc_data_channel_get_close_handler(
  * Set the data channel's message handler.
  */
 enum rawrtc_code rawrtc_data_channel_set_message_handler(
-        struct rawrtc_data_channel* const channel,
-        rawrtc_data_channel_message_handler const message_handler // nullable
+    struct rawrtc_data_channel* const channel,
+    rawrtc_data_channel_message_handler const message_handler  // nullable
 ) {
     // Check arguments
     if (!channel) {
@@ -347,9 +334,8 @@ enum rawrtc_code rawrtc_data_channel_set_message_handler(
  * Returns `RAWRTC_CODE_NO_VALUE` in case no handler has been set.
  */
 enum rawrtc_code rawrtc_data_channel_get_message_handler(
-        rawrtc_data_channel_message_handler* const message_handlerp, // de-referenced
-        struct rawrtc_data_channel* const channel
-) {
+    rawrtc_data_channel_message_handler* const message_handlerp,  // de-referenced
+    struct rawrtc_data_channel* const channel) {
     // Check arguments
     if (!message_handlerp || !channel) {
         return RAWRTC_CODE_INVALID_ARGUMENT;

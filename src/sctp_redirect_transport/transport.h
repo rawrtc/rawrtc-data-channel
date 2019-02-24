@@ -30,8 +30,8 @@ struct rawrtc_sctp_redirect_transport {
     uint16_t local_port;
     uint16_t remote_port;
     struct sa redirect_address;
-    rawrtc_sctp_redirect_transport_state_change_handler state_change_handler; // nullable
-    void* arg; // nullable
+    rawrtc_sctp_redirect_transport_state_change_handler state_change_handler;  // nullable
+    void* arg;  // nullable
     struct mbuf* buffer;
     int socket;
 };

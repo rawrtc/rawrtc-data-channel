@@ -3,8 +3,8 @@
 #include <rawrtcdc/main.h>
 #include <rawrtcc/code.h>
 #include <re.h>
-#include <usrsctp.h> // usrsctp_handle_timers
-#include <limits.h> // INT_MAX
+#include <usrsctp.h>  // usrsctp_handle_timers
+#include <limits.h>  // INT_MAX
 
 /*
  * Global RAWRTCDC settings.
@@ -18,10 +18,7 @@ struct rawrtcdc_global rawrtcdc_global;
  * Note: In case `init_re` is not set to `true`, you MUST initialise
  *       re yourselves before calling this function.
  */
-enum rawrtc_code rawrtcdc_init(
-        bool const init_re,
-        rawrtcdc_timer_handler const timer_handler
-) {
+enum rawrtc_code rawrtcdc_init(bool const init_re, rawrtcdc_timer_handler const timer_handler) {
     // Check arguments
     if (!timer_handler) {
         return RAWRTC_CODE_INVALID_ARGUMENT;
@@ -53,9 +50,7 @@ enum rawrtc_code rawrtcdc_init(
  * Note: In case `close_re` is not set to `true`, you MUST close
  *       re yourselves.
  */
-enum rawrtc_code rawrtcdc_close(
-        bool const close_re
-) {
+enum rawrtc_code rawrtcdc_close(bool const close_re) {
     // TODO: Close usrsctp if initialised
 
     // Remove timer handler
@@ -74,9 +69,7 @@ enum rawrtc_code rawrtcdc_close(
  * Handle timer tick.
  * `delta` contains the delta milliseconds passed between calls.
  */
-void rawrtcdc_timer_tick(
-        uint_fast16_t const delta
-) {
+void rawrtcdc_timer_tick(uint_fast16_t const delta) {
     // Pass delta ms to usrsctp
 #if (UINT16_MAX > INT_MAX)
     usrsctp_handle_timers(delta > INT_MAX ? INT_MAX : ((int) delta));
