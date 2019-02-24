@@ -1,6 +1,5 @@
 #pragma once
 #include <rawrtcdc/main.h>
-
 #include <re.h>
 
 extern struct rawrtcdc_global rawrtcdc_global;

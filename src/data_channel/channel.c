@@ -3,7 +3,6 @@
 #include "../data_transport/transport.h"
 #include <rawrtcdc/config.h>
 #include <rawrtcdc/data_channel.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 

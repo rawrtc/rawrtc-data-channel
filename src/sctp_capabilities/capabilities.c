@@ -1,6 +1,5 @@
 #include "capabilities.h"
 #include <rawrtcdc/sctp_capabilities.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 

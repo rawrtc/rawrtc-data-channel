@@ -10,7 +10,6 @@
 #include <rawrtcdc/data_transport.h>
 #include <rawrtcdc/external.h>
 #include <rawrtcdc/sctp_transport.h>
-
 #include <rawrtcc/code.h>
 #include <rawrtcc/message_buffer.h>
 #include <rawrtcc/utils.h>

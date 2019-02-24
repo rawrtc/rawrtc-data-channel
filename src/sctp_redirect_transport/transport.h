@@ -2,7 +2,6 @@
 #include <rawrtcdc/external.h>
 #include <rawrtcdc/sctp_redirect_transport.h>
 #include <rawrtcdc/sctp_transport.h>
-
 #include <re.h>
 
 enum {

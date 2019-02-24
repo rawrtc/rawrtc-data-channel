@@ -2,7 +2,6 @@
 #include <rawrtcdc/data_channel.h>
 #include <rawrtcdc/data_channel_parameters.h>
 #include <rawrtcdc/data_transport.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 

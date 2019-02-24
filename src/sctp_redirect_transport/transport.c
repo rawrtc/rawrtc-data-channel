@@ -4,7 +4,6 @@
 #include <rawrtcdc/external.h>
 #include <rawrtcdc/sctp_redirect_transport.h>
 #include <rawrtcdc/sctp_transport.h>
-
 #include <rawrtcc/code.h>
 #include <rawrtcc/utils.h>
 #include <re.h>

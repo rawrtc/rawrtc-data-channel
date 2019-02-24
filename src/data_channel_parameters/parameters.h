@@ -1,6 +1,5 @@
 #pragma once
 #include <rawrtcdc/data_channel.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 

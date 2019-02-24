@@ -1,7 +1,6 @@
 #include "transport.h"
 #include <rawrtcdc/config.h>
 #include <rawrtcdc/data_transport.h>
-
 #include <rawrtcc/code.h>
 #include <re.h>
 
