@@ -41,13 +41,13 @@ struct send_context {
 // Events to subscribe to
 static uint16_t const sctp_events[] = {
     SCTP_ASSOC_CHANGE,
-//    SCTP_PEER_ADDR_CHANGE,
-//    SCTP_REMOTE_ERROR,
+    // SCTP_PEER_ADDR_CHANGE,
+    // SCTP_REMOTE_ERROR,
     SCTP_PARTIAL_DELIVERY_EVENT,
     SCTP_SEND_FAILED_EVENT,
     SCTP_SENDER_DRY_EVENT,
     SCTP_SHUTDOWN_EVENT,
-//    SCTP_ADAPTATION_INDICATION,
+    // SCTP_ADAPTATION_INDICATION,
     SCTP_STREAM_CHANGE_EVENT,
     SCTP_STREAM_RESET_EVENT,
 };
@@ -123,7 +123,6 @@ static enum rawrtc_code data_channel_open_message_parse(
     }
 
     // Get label
-
 #if (UINT_FAST16_MAX > SIZE_MAX)
     if (label_length > SIZE_MAX) {
         return RAWRTC_CODE_INVALID_MESSAGE;
@@ -1211,12 +1210,12 @@ static int sctp_packet_handler(
         goto out;
     }
 
-    // Calculate CRC32C checksum
+    // Calculate CRC32-C checksum
     if (!(checksum_flags & RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_OUTBOUND)) {
         if (length >= sizeof(struct sctp_common_header)) {
             struct sctp_common_header* const header = buffer;
             // Note: The resulting checksum will be in network byte order
-            header->crc32c = rawrtc_crc32c(0x00000000, buffer, length);
+            header->crc32c = rawrtc_crc32c(buffer, length);
         } else {
             DEBUG_WARNING("Outbound packet too short (%zu bytes), please report this!\n", length);
             goto out;
@@ -1724,8 +1723,8 @@ static int read_event_handler(struct rawrtc_sctp_transport* const transport  // 
 
     // Receive notification or data
     length = usrsctp_recvv(
-        transport->socket, buffer->buf, buffer->size, NULL, NULL,
-        &info, &info_length, &info_type, &flags);
+        transport->socket, buffer->buf, buffer->size, NULL, NULL, &info, &info_length, &info_type,
+        &flags);
     if (length < 0) {
         switch (errno) {
             case EAGAIN:
@@ -2079,7 +2078,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
         // See: https://tools.ietf.org/html/rfc6458#section-8.1.20
         usrsctp_sysctl_set_sctp_default_frag_interleave(2);
 
-        // Disable default CRC32C checksum calculation
+        // Disable default CRC32-C checksum calculation
         // Note: We may or may not calculate and verify the checksum depending on the
         //       configuration.
         usrsctp_enable_crc32c_offload();
@@ -2177,8 +2176,8 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     if (rawrtcdc_global.usrsctp_initialized == 1) {
         socklen_t option_size = sizeof(int);  // PD point is int according to spec
         if (usrsctp_getsockopt(
-                transport->socket, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
-                &option_value, &option_size)) {
+                transport->socket, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT, &option_value,
+                &option_size)) {
             DEBUG_WARNING("Could not retrieve partial delivery point, reason: %m\n", errno);
             error = rawrtc_error_to_code(errno);
             goto out;
@@ -2200,8 +2199,8 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     av.assoc_id = SCTP_ALL_ASSOC;
     av.assoc_value = SCTP_ENABLE_RESET_STREAM_REQ | SCTP_ENABLE_CHANGE_ASSOC_REQ;
     if (usrsctp_setsockopt(
-            transport->socket, IPPROTO_SCTP, SCTP_ENABLE_STREAM_RESET,
-            &av, sizeof(struct sctp_assoc_value))) {
+            transport->socket, IPPROTO_SCTP, SCTP_ENABLE_STREAM_RESET, &av,
+            sizeof(struct sctp_assoc_value))) {
         DEBUG_WARNING("Could not enable stream reconfiguration extension, reason: %m\n", errno);
         error = rawrtc_error_to_code(errno);
         goto out;
@@ -2210,8 +2209,8 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     // We want info
     option_value = 1;
     if (usrsctp_setsockopt(
-            transport->socket, IPPROTO_SCTP, SCTP_RECVRCVINFO,
-            &option_value, sizeof(option_value))) {
+            transport->socket, IPPROTO_SCTP, SCTP_RECVRCVINFO, &option_value,
+            sizeof(option_value))) {
         DEBUG_WARNING("Could not set info option, reason: %m\n", errno);
         error = rawrtc_error_to_code(errno);
         goto out;
@@ -2948,7 +2947,7 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     // Note: No need to check if NULL as the function does it for us
     trace_packet(transport, raw_buffer, length, SCTP_DUMP_INBOUND);
 
-    // Verify CRC32C checksum
+    // Verify CRC32-C checksum
     if (!(checksum_flags & RAWRTC_SCTP_TRANSPORT_CHECKSUM_DISABLE_INBOUND)) {
         if (length >= sizeof(struct sctp_common_header)) {
             struct sctp_common_header* const header = raw_buffer;
@@ -2957,15 +2956,15 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
 
             // Calculate checksum
             // Note: The field is still in network byte order (even though we don't convert the
-            // zeroes). Furthermore, the result from `usrsctp_crc32c` is also in network byte order.
+            // zeroes). Furthermore, the result from `rawrtc_crc32c` is also in network byte order.
             header->crc32c = 0x00000000;
-            expected_checksum = rawrtc_crc32c(0x00000000, raw_buffer, length);
+            expected_checksum = rawrtc_crc32c(raw_buffer, length);
             header->crc32c = actual_checksum;
 
             // Verify checksum is correct
             if (actual_checksum != expected_checksum) {
                 DEBUG_NOTICE(
-                    "Inbound packet has invalid CRC32C checksum, expected=%08x, actual=%08x\n",
+                    "Inbound packet has invalid CRC32-C checksum, expected=%08x, actual=%08x\n",
                     ntohl(expected_checksum), ntohl(actual_checksum));
                 return RAWRTC_CODE_INVALID_MESSAGE;
             }

@@ -15,7 +15,7 @@
 ///
 /// Note: This does not necessarily mean that hardware CRC32-C will be used
 ///       which depends on whether your CPU supports SSE 4.2 at runtime.
-#mesondefine RAWRTCDC_ENABLE_HW_CRC32C
+#mesondefine RAWRTCDC_ENABLE_SSE42_CRC32C
 
 /// Whether the SCTP redirect transport has been compiled
 #mesondefine RAWRTCDC_HAVE_SCTP_REDIRECT_TRANSPORT

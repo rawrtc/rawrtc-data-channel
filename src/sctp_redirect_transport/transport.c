@@ -48,7 +48,7 @@ static void patch_sctp_header(
     memset(mbuf_buf(buffer), 0, 4);
     mbuf_set_pos(buffer, start);
     // Recalculate checksum
-    checksum = rawrtc_crc32c(0x00000000, mbuf_buf(buffer), mbuf_get_left(buffer));
+    checksum = rawrtc_crc32c(mbuf_buf(buffer), mbuf_get_left(buffer));
     // Advance to checksum field, set it and rewind back
     mbuf_advance(buffer, 8);
     err = mbuf_write_u32(buffer, checksum);
