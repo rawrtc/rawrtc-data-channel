@@ -1,4 +1,4 @@
 [wrap-git]
 directory = usrsctp
 url = https://github.com/rawrtc/usrsctp.git
-revision = 546854d9fceb161da94d8ada9145f5db2d2a3cc1
+revision = 126891f97c6ca48ed51f57e6b8268d4cde7a6a1d

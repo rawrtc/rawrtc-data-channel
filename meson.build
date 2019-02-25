@@ -73,7 +73,8 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 '''
-configuration.set10('RAWRTCDC_ENABLE_HW_CRC32C', compiler.compiles(code))
+have_cpuid = compiler.compiles(code)
+configuration.set10('RAWRTCDC_ENABLE_SSE42_CRC32C', have_cpuid)
 
 # Options
 configuration.set10('RAWRTCDC_HAVE_SCTP_REDIRECT_TRANSPORT', get_option('sctp_redirect_transport'))
