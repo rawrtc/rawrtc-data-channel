@@ -1,9 +1,7 @@
 #pragma once
+#include "data_channel.h"
 #include <rawrtcc/code.h>
 #include <re.h>
-
-// Dependencies
-enum rawrtc_data_channel_type;
 
 /**
  * Data channel parameters.
