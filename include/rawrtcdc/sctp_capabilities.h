@@ -24,3 +24,10 @@ enum rawrtc_code rawrtc_sctp_capabilities_create(
 enum rawrtc_code rawrtc_sctp_capabilities_get_max_message_size(
     uint64_t* const max_message_sizep,  // de-referenced
     struct rawrtc_sctp_capabilities* const capabilities);
+
+
+/**
+ * Print debug information for SCTP capabilities.
+ */
+int rawrtc_sctp_capabilities_debug(
+    struct re_printf* const pf, struct rawrtc_sctp_capabilities const* const capabilities);

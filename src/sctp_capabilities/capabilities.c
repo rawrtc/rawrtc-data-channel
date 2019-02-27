@@ -3,7 +3,7 @@
 #include <rawrtcc/code.h>
 #include <re.h>
 
-/*
+/**
  * Print debug information for SCTP capabilities.
  */
 int rawrtc_sctp_capabilities_debug(
