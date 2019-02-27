@@ -122,7 +122,7 @@ static enum rawrtc_code data_channel_open_message_parse(
             return RAWRTC_CODE_INVALID_MESSAGE;
     }
 
-    // Get label
+        // Get label
 #if (UINT_FAST16_MAX > SIZE_MAX)
     if (label_length > SIZE_MAX) {
         return RAWRTC_CODE_INVALID_MESSAGE;
