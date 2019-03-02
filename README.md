@@ -51,8 +51,10 @@ Features with a check mark are already implemented.
 5. *Can I use it in a threaded environment?*
 
    Yes. Just make sure you're always calling it from the same thread the event
-   loop is running on or [use the message queues provided by re][re-mqueue] to
-   push data to the event loop thread.
+   loop is running on, or either [lock/unlock the event loop thread][re-lock]
+   or [use the message queues provided by re][re-mqueue] to exchange data with
+   the event loop thread. However, it is important that you only run one *re*
+   event loop in one thread.
 
 6. *Does it create threads?*
 
@@ -325,6 +327,7 @@ apply a consistent code style.
 [meson]: https://mesonbuild.com
 [ninja]: https://ninja-build.org
 
+[re-lock]: http://www.creytiv.com/doxygen/re-dox/html/re__main_8h.html#ad335fcaa56e36b39cb1192af1a6b9904
 [re-mqueue]: http://www.creytiv.com/doxygen/re-dox/html/re__mqueue_8h.html
 [usrsctp-neat-issue-12]: https://github.com/NEAT-project/usrsctp-neat/issues/12
 [sctp_transport.h]: include/rawrtcdc/sctp_transport.h
