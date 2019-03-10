@@ -1,6 +1,6 @@
 # Project definition
 project('rawrtcdc', 'c',
-    version: '0.1.0',
+    version: '0.1.1',
     default_options: ['c_std=c99'],
     meson_version: '>=0.46.0')
 
@@ -51,7 +51,7 @@ usrsctp_dep = dependency('usrsctp',
 
 # Dependency: rawrtcc
 rawrtcc_dep = dependency('rawrtcc',
-    version: '>=0.1.0',
+    version: '>=0.1.1',
     fallback: ['rawrtcc', 'rawrtcc_dep'],
     required: true)
 
