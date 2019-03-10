@@ -104,6 +104,11 @@ rawrtcdc = library(meson.project_name(), sources,
     install: true,
     version: version)
 
+# Declare dependency
+rawrtcdc_dep = declare_dependency(
+    include_directories: include_dir,
+    link_with: rawrtcdc)
+
 # Generate pkg-config file
 pkg = import('pkgconfig')
 pkg.generate(rawrtcdc,
