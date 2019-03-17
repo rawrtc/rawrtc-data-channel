@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 '''
-have_cpuid = compiler.compiles(code)
+have_cpuid = compiler.compiles(code) and host_machine.cpu() == 'x86_64'
 configuration.set10('RAWRTCDC_ENABLE_SSE42_CRC32C', have_cpuid)
 
 # Options
