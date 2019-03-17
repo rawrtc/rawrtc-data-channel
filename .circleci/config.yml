@@ -103,35 +103,48 @@ jobs:
     docker:
       - image: rawrtc/cross-build:linux-armv6
 
-  # Cross: Linux ARMv6
+  # Cross: Linux ARMv7
   linux-armv7:
     <<: *shared-cross
     docker:
       - image: rawrtc/cross-build:linux-armv7
 
-  # Cross: Android API 21 ARM
-  android-21-arm:
+  # Cross: Android API 16 ARM
+  android-16-arm:
     <<: *shared-cross
     docker:
-      - image: rawrtc/cross-build:android-21-arm
+      - image: rawrtc/cross-build:android-16-arm
 
-  # Cross: Android API 21 ARM64
-  android-21-arm64:
+  # Cross: Android API 16 x86
+  android-16-x86:
     <<: *shared-cross
     docker:
-      - image: rawrtc/cross-build:android-21-arm64
+      - image: rawrtc/cross-build:android-16-x86
 
-  # Cross: Android API 27 ARM
-  android-27-arm:
+  # Cross: Android API 28 ARM
+  android-28-arm:
     <<: *shared-cross
     docker:
-      - image: rawrtc/cross-build:android-27-arm
+      - image: rawrtc/cross-build:android-28-arm
 
-  # Cross: Android API 27 ARM64
-  android-27-arm64:
+  # Cross: Android API 28 ARM64
+  android-28-arm64:
     <<: *shared-cross
     docker:
-      - image: rawrtc/cross-build:android-27-arm64
+      - image: rawrtc/cross-build:android-28-arm64
+
+  # Cross: Android API 28 x86
+  android-28-x86:
+    <<: *shared-cross
+    docker:
+      - image: rawrtc/cross-build:android-28-x86
+
+  # Cross: Android API 28 x86_64
+  # TODO: https://github.com/mesonbuild/meson/issues/5102
+  #android-28-x86_64:
+  #  <<: *shared-cross
+  #  docker:
+  #    - image: rawrtc/cross-build:android-28-x86_64
 
   # Cross: Windows x86
   #windows-x86:
@@ -162,9 +175,11 @@ workflows:
       - archlinux-clang
       - linux-armv6
       - linux-armv7
-      - android-21-arm
-      - android-21-arm64
-      - android-27-arm
-      - android-27-arm64
+      - android-16-arm
+      - android-16-x86
+      - android-28-arm
+      - android-28-arm64
+      - android-28-x86
+      #- android-28-x86_64
       #- windows-x86
       #- windows-x64
