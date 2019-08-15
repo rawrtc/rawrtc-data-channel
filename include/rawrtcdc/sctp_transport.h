@@ -9,6 +9,11 @@ struct rawrtc_sctp_capabilities;
 struct rawrtc_sctp_transport_context;
 
 /**
+ * Missing in usrsctp.h
+ */
+#define SCTP_PLUGGABLE_CC 0x00001202
+
+/**
  * SCTP transport checksum configuration flags.
  * TODO: Add configuration to make these applyable.
  */
@@ -30,7 +35,19 @@ enum rawrtc_sctp_transport_state {
 };
 
 /**
- * SCTP transport default MTU
+ * SCTP transport congestion control algorithm.
+ *
+ * Note: RFC 2581 is the original default algorithm for TCP.
+ */
+enum rawrtc_sctp_transport_congestion_ctrl {
+    RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RFC2581,
+    RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HSTCP,
+    RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HTCP,
+    RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RTCC,
+};
+
+/**
+ * SCTP transport default MTU.
  */
 enum {
     RAWRTC_SCTP_TRANSPORT_DEFAULT_MTU = 1200,
@@ -103,6 +120,36 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     struct rawrtc_sctp_transport* const transport,
     struct mbuf* const buffer,
     uint8_t const ecn_bits);
+
+/**
+ * Set the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_buffer_length(
+    struct rawrtc_sctp_transport* const transport,
+    uint32_t const send_buffer_length,
+    uint32_t const receive_buffer_length);
+
+/**
+ * Get the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_buffer_length(
+    uint32_t* const send_buffer_lengthp,
+    uint32_t* const receive_buffer_lengthp,
+    struct rawrtc_sctp_transport* const transport);
+
+/**
+ * Set the SCTP transport's congestion control algorithm.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_congestion_ctrl_algorithm(
+    struct rawrtc_sctp_transport* const transport,
+    enum rawrtc_sctp_transport_congestion_ctrl const algorithm);
+
+/**
+ * Get the current SCTP transport's congestion control algorithm.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_congestion_ctrl_algorithm(
+    enum rawrtc_sctp_transport_congestion_ctrl* const algorithmp,
+    struct rawrtc_sctp_transport* const transport);
 
 /**
  * Set the SCTP transport's maximum transmission unit (MTU).
@@ -208,3 +255,9 @@ enum rawrtc_code rawrtc_sctp_transport_get_state_change_handler(
  * Get the corresponding name for an SCTP transport state.
  */
 char const* rawrtc_sctp_transport_state_to_name(enum rawrtc_sctp_transport_state const state);
+
+/*
+ * Get the corresponding name for a congestion control algorithm.
+ */
+char const* rawrtc_sctp_transport_congestion_ctrl_algorithm_to_name(
+    enum rawrtc_sctp_transport_congestion_ctrl const algorithm);

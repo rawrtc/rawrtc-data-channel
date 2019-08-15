@@ -16,6 +16,7 @@
 #include <re.h>
 #include <usrsctp.h>
 #include <errno.h>  // errno
+#include <limits.h>  // INT_MAX
 #include <netinet/in.h>  // IPPROTO_SCTP, htons, ntohs
 #include <stdio.h>  // fopen, ...
 #include <string.h>  // memcpy, strlen
@@ -2220,7 +2221,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     //       This needs some work: https://github.com/rawrtc/rawrtc-data-channel/issues/14
     // https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-ndata-08#section-4.3.1
     //
-    // av.assoc_id = SCTP_FUTURE_ASSOC;
+    // av.assoc_id = SCTP_ALL_ASSOC;
     // av.assoc_value = 1;
     // if (usrsctp_setsockopt(transport->socket, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED,
     //         &av, sizeof(struct sctp_assoc_value))) {
@@ -2273,6 +2274,35 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
             goto out;
         }
     }
+
+#if DEBUG_LEVEL >= 7
+    // Print send/receive buffer lengths
+    {
+        uint32_t send_buffer_length;
+        uint32_t receive_buffer_length;
+        error = rawrtc_sctp_transport_get_buffer_length(
+            &send_buffer_length, &receive_buffer_length, transport);
+        if (error) {
+            goto out;
+        }
+        DEBUG_PRINTF(
+            "Send/receive buffer length: %" PRIu32 "/%" PRIu32 "\n", send_buffer_length,
+            receive_buffer_length);
+    }
+
+    // Print congestion control algorithm
+    {
+        enum rawrtc_sctp_transport_congestion_ctrl congestion_ctrl_algorithm;
+        error = rawrtc_sctp_transport_get_congestion_ctrl_algorithm(
+            &congestion_ctrl_algorithm, transport);
+        if (error) {
+            goto out;
+        }
+        DEBUG_PRINTF(
+            "Congestion control algorithm: %s\n",
+            rawrtc_sctp_transport_congestion_ctrl_algorithm_to_name(congestion_ctrl_algorithm));
+    }
+#endif
 
     // Bind local address
     peer.sconn_family = AF_CONN;
@@ -2977,6 +3007,159 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     // Feed into SCTP socket
     DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
     usrsctp_conninput(transport, raw_buffer, length, ecn_bits);
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Set the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_buffer_length(
+    struct rawrtc_sctp_transport* const transport,
+    uint32_t const send_buffer_length,
+    uint32_t const receive_buffer_length) {
+    int option_value;
+
+    // Check arguments
+    if (!transport || send_buffer_length == 0 || receive_buffer_length == 0 ||
+        send_buffer_length > INT_MAX || receive_buffer_length > INT_MAX) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set length for send/receive buffer
+    option_value = (int) send_buffer_length;
+    if (usrsctp_setsockopt(
+            transport->socket, SOL_SOCKET, SO_SNDBUF, &option_value, sizeof(option_value))) {
+        return rawrtc_error_to_code(errno);
+    }
+    option_value = (int) receive_buffer_length;
+    if (usrsctp_setsockopt(
+            transport->socket, SOL_SOCKET, SO_RCVBUF, &option_value, sizeof(option_value))) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Done
+    DEBUG_PRINTF(
+        "Set send/receive buffer length to %" PRIu32 "/%" PRIu32 "\n", send_buffer_length,
+        receive_buffer_length);
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_buffer_length(
+    uint32_t* const send_buffer_lengthp,
+    uint32_t* const receive_buffer_lengthp,
+    struct rawrtc_sctp_transport* const transport) {
+    int option_value;
+    socklen_t option_size;
+
+    // Check arguments
+    if (!send_buffer_lengthp || !receive_buffer_lengthp || !transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Get length of send/receive buffer
+    option_size = sizeof(option_value);
+    if (usrsctp_getsockopt(transport->socket, SOL_SOCKET, SO_SNDBUF, &option_value, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+    *send_buffer_lengthp = (uint32_t) option_value;
+    option_size = sizeof(option_value);
+    if (usrsctp_getsockopt(transport->socket, SOL_SOCKET, SO_RCVBUF, &option_value, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+    *receive_buffer_lengthp = (uint32_t) option_value;
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Set the SCTP transport's congestion control algorithm.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_congestion_ctrl_algorithm(
+    struct rawrtc_sctp_transport* const transport,
+    enum rawrtc_sctp_transport_congestion_ctrl const algorithm) {
+    struct sctp_assoc_value av;
+
+    // Check arguments
+    if (!transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Translate algorithm
+    switch (algorithm) {
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RFC2581:
+            av.assoc_value = SCTP_CC_RFC2581;
+            break;
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HSTCP:
+            av.assoc_value = SCTP_CC_HSTCP;
+            break;
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HTCP:
+            av.assoc_value = SCTP_CC_HTCP;
+            break;
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RTCC:
+            av.assoc_value = SCTP_CC_RTCC;
+            break;
+        default:
+            return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set congestion control algorithm
+    av.assoc_id = SCTP_ALL_ASSOC;
+    if (usrsctp_setsockopt(
+            transport->socket, IPPROTO_SCTP, SCTP_PLUGGABLE_CC, &av,
+            sizeof(struct sctp_assoc_value))) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Done
+    DEBUG_PRINTF(
+        "Set congestion control algorithm to %s\n",
+        rawrtc_sctp_transport_congestion_ctrl_algorithm_to_name(algorithm));
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the current SCTP transport's congestion control algorithm.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_congestion_ctrl_algorithm(
+    enum rawrtc_sctp_transport_congestion_ctrl* const algorithmp,
+    struct rawrtc_sctp_transport* const transport) {
+    struct sctp_assoc_value av;
+    socklen_t option_size;
+
+    // Check arguments
+    if (!algorithmp || !transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Get congestion control algorithm
+    option_size = sizeof(av);
+    if (usrsctp_getsockopt(transport->socket, IPPROTO_SCTP, SCTP_PLUGGABLE_CC, &av, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Translate algorithm
+    switch (av.assoc_value) {
+        case SCTP_CC_RFC2581:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RFC2581;
+            break;
+        case SCTP_CC_HSTCP:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HSTCP;
+            break;
+        case SCTP_CC_HTCP:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HTCP;
+            break;
+        case SCTP_CC_RTCC:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RTCC;
+            break;
+        default:
+            return RAWRTC_CODE_UNSUPPORTED_ALGORITHM;
+    }
 
     // Done
     return RAWRTC_CODE_SUCCESS;

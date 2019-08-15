@@ -51,7 +51,7 @@ usrsctp_dep = dependency('usrsctp',
 
 # Dependency: rawrtcc
 rawrtcc_dep = dependency('rawrtcc',
-    version: '>=0.1.1',
+    version: '>=0.1.2',
     fallback: ['rawrtcc', 'rawrtcc_dep'],
     required: true)
 
