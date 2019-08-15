@@ -16,6 +16,7 @@
 #include <re.h>
 #include <usrsctp.h>
 #include <errno.h>  // errno
+#include <limits.h>  // INT_MAX
 #include <netinet/in.h>  // IPPROTO_SCTP, htons, ntohs
 #include <stdio.h>  // fopen, ...
 #include <string.h>  // memcpy, strlen
@@ -2275,6 +2276,20 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     }
 
 #if DEBUG_LEVEL >= 7
+    // Print send/receive buffer lengths
+    {
+        uint32_t send_buffer_length;
+        uint32_t receive_buffer_length;
+        error = rawrtc_sctp_transport_get_buffer_length(
+            &send_buffer_length, &receive_buffer_length, transport);
+        if (error) {
+            goto out;
+        }
+        DEBUG_PRINTF(
+            "Send/receive buffer length: %" PRIu32 "/%" PRIu32 "\n", send_buffer_length,
+            receive_buffer_length);
+    }
+
     // Print congestion control algorithm
     {
         enum rawrtc_sctp_transport_congestion_ctrl congestion_ctrl_algorithm;
@@ -2992,6 +3007,71 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     // Feed into SCTP socket
     DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
     usrsctp_conninput(transport, raw_buffer, length, ecn_bits);
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Set the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_buffer_length(
+    struct rawrtc_sctp_transport* const transport,
+    uint32_t const send_buffer_length,
+    uint32_t const receive_buffer_length) {
+    int option_value;
+
+    // Check arguments
+    if (!transport || send_buffer_length == 0 || receive_buffer_length == 0 ||
+        send_buffer_length > INT_MAX || receive_buffer_length > INT_MAX) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set length for send/receive buffer
+    option_value = (int) send_buffer_length;
+    if (usrsctp_setsockopt(
+            transport->socket, SOL_SOCKET, SO_SNDBUF, &option_value, sizeof(option_value))) {
+        return rawrtc_error_to_code(errno);
+    }
+    option_value = (int) receive_buffer_length;
+    if (usrsctp_setsockopt(
+            transport->socket, SOL_SOCKET, SO_RCVBUF, &option_value, sizeof(option_value))) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Done
+    DEBUG_PRINTF(
+        "Set send/receive buffer length to %" PRIu32 "/%" PRIu32 "\n", send_buffer_length,
+        receive_buffer_length);
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_buffer_length(
+    uint32_t* const send_buffer_lengthp,
+    uint32_t* const receive_buffer_lengthp,
+    struct rawrtc_sctp_transport* const transport) {
+    int option_value;
+    socklen_t option_size;
+
+    // Check arguments
+    if (!send_buffer_lengthp || !receive_buffer_lengthp || !transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Get length of send/receive buffer
+    option_size = sizeof(option_value);
+    if (usrsctp_getsockopt(transport->socket, SOL_SOCKET, SO_SNDBUF, &option_value, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+    *send_buffer_lengthp = (uint32_t) option_value;
+    option_size = sizeof(option_value);
+    if (usrsctp_getsockopt(transport->socket, SOL_SOCKET, SO_RCVBUF, &option_value, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+    *receive_buffer_lengthp = (uint32_t) option_value;
 
     // Done
     return RAWRTC_CODE_SUCCESS;

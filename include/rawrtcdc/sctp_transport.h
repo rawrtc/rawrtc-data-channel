@@ -122,6 +122,22 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     uint8_t const ecn_bits);
 
 /**
+ * Set the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_buffer_length(
+    struct rawrtc_sctp_transport* const transport,
+    uint32_t const send_buffer_length,
+    uint32_t const receive_buffer_length);
+
+/**
+ * Get the SCTP transport's send and receive buffer length in bytes.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_buffer_length(
+    uint32_t* const send_buffer_lengthp,
+    uint32_t* const receive_buffer_lengthp,
+    struct rawrtc_sctp_transport* const transport);
+
+/**
  * Set the SCTP transport's congestion control algorithm.
  */
 enum rawrtc_code rawrtc_sctp_transport_set_congestion_ctrl_algorithm(
