@@ -2220,7 +2220,7 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
     //       This needs some work: https://github.com/rawrtc/rawrtc-data-channel/issues/14
     // https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-ndata-08#section-4.3.1
     //
-    // av.assoc_id = SCTP_FUTURE_ASSOC;
+    // av.assoc_id = SCTP_ALL_ASSOC;
     // av.assoc_value = 1;
     // if (usrsctp_setsockopt(transport->socket, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED,
     //         &av, sizeof(struct sctp_assoc_value))) {
@@ -2273,6 +2273,21 @@ enum rawrtc_code rawrtc_sctp_transport_create_from_external(
             goto out;
         }
     }
+
+#if DEBUG_LEVEL >= 7
+    // Print congestion control algorithm
+    {
+        enum rawrtc_sctp_transport_congestion_ctrl congestion_ctrl_algorithm;
+        error = rawrtc_sctp_transport_get_congestion_ctrl_algorithm(
+            &congestion_ctrl_algorithm, transport);
+        if (error) {
+            goto out;
+        }
+        DEBUG_PRINTF(
+            "Congestion control algorithm: %s\n",
+            rawrtc_sctp_transport_congestion_ctrl_algorithm_to_name(congestion_ctrl_algorithm));
+    }
+#endif
 
     // Bind local address
     peer.sconn_family = AF_CONN;
@@ -2977,6 +2992,94 @@ enum rawrtc_code rawrtc_sctp_transport_feed_inbound(
     // Feed into SCTP socket
     DEBUG_PRINTF("Feeding SCTP packet of %zu bytes\n", length);
     usrsctp_conninput(transport, raw_buffer, length, ecn_bits);
+
+    // Done
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Set the SCTP transport's congestion control algorithm.
+ */
+enum rawrtc_code rawrtc_sctp_transport_set_congestion_ctrl_algorithm(
+    struct rawrtc_sctp_transport* const transport,
+    enum rawrtc_sctp_transport_congestion_ctrl const algorithm) {
+    struct sctp_assoc_value av;
+
+    // Check arguments
+    if (!transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Translate algorithm
+    switch (algorithm) {
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RFC2581:
+            av.assoc_value = SCTP_CC_RFC2581;
+            break;
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HSTCP:
+            av.assoc_value = SCTP_CC_HSTCP;
+            break;
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HTCP:
+            av.assoc_value = SCTP_CC_HTCP;
+            break;
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RTCC:
+            av.assoc_value = SCTP_CC_RTCC;
+            break;
+        default:
+            return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Set congestion control algorithm
+    av.assoc_id = SCTP_ALL_ASSOC;
+    if (usrsctp_setsockopt(
+            transport->socket, IPPROTO_SCTP, SCTP_PLUGGABLE_CC, &av,
+            sizeof(struct sctp_assoc_value))) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Done
+    DEBUG_PRINTF(
+        "Set congestion control algorithm to %s\n",
+        rawrtc_sctp_transport_congestion_ctrl_algorithm_to_name(algorithm));
+    return RAWRTC_CODE_SUCCESS;
+}
+
+/*
+ * Get the current SCTP transport's congestion control algorithm.
+ */
+enum rawrtc_code rawrtc_sctp_transport_get_congestion_ctrl_algorithm(
+    enum rawrtc_sctp_transport_congestion_ctrl* const algorithmp,
+    struct rawrtc_sctp_transport* const transport) {
+    struct sctp_assoc_value av;
+    socklen_t option_size;
+
+    // Check arguments
+    if (!algorithmp || !transport) {
+        return RAWRTC_CODE_INVALID_ARGUMENT;
+    }
+
+    // Get congestion control algorithm
+    option_size = sizeof(av);
+    if (usrsctp_getsockopt(transport->socket, IPPROTO_SCTP, SCTP_PLUGGABLE_CC, &av, &option_size)) {
+        return rawrtc_error_to_code(errno);
+    }
+
+    // Translate algorithm
+    switch (av.assoc_value) {
+        case SCTP_CC_RFC2581:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RFC2581;
+            break;
+        case SCTP_CC_HSTCP:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HSTCP;
+            break;
+        case SCTP_CC_HTCP:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HTCP;
+            break;
+        case SCTP_CC_RTCC:
+            *algorithmp = RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RTCC;
+            break;
+        default:
+            return RAWRTC_CODE_UNSUPPORTED_ALGORITHM;
+    }
 
     // Done
     return RAWRTC_CODE_SUCCESS;

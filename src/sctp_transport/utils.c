@@ -17,3 +17,22 @@ char const* rawrtc_sctp_transport_state_to_name(enum rawrtc_sctp_transport_state
             return "???";
     }
 }
+
+/*
+ * Get the corresponding name for a congestion control algorithm.
+ */
+char const* rawrtc_sctp_transport_congestion_ctrl_algorithm_to_name(
+    enum rawrtc_sctp_transport_congestion_ctrl const algorithm) {
+    switch (algorithm) {
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RFC2581:
+            return "RFC2581";
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HSTCP:
+            return "HSTCP";
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_HTCP:
+            return "HTCP";
+        case RAWRTC_SCTP_TRANSPORT_CONGESTION_CTRL_RTCC:
+            return "RTCC";
+        default:
+            return "???";
+    }
+}
