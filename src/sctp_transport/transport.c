@@ -495,7 +495,7 @@ static enum rawrtc_code send_message(
         }
 
         // Partial reliability policy
-        switch (ppid) {
+        switch (channel->parameters->channel_type) {
             case RAWRTC_DATA_CHANNEL_TYPE_UNRELIABLE_ORDERED_RETRANSMIT:
             case RAWRTC_DATA_CHANNEL_TYPE_UNRELIABLE_UNORDERED_RETRANSMIT:
                 // Set amount of retransmissions
