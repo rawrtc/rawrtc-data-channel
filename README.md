@@ -58,9 +58,7 @@ Features with a check mark are already implemented.
 
 6. *Does it create threads?*
 
-   No. However, there is an
-   [issue with the usrsctp dependency][usrsctp-neat-issue-12] which will
-   hopefully be resolved soon.
+   No.
 
 7. *Is this a custom SCTP implementation?*
 
