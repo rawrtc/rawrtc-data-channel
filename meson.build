@@ -39,7 +39,7 @@ re_dep = dependency('librawrre',
 # Dependency: usrsctp
 sctp_debug = get_option('debug_level') >= 7
 usrsctp_dep = dependency('usrsctp',
-    version: ['>=1.0.0', '<2'],
+    version: ['>=0.9.5.0', '<2'],
     fallback: ['usrsctp', 'usrsctp_dep'],
     default_options: [
         'sctp_build_programs=false',
